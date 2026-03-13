@@ -1,3 +1,19 @@
+def get_base_graphic_compare_table(months, column_letter):
+
+    rows = []
+    
+    for i, month in enumerate(months):
+        rows.append({
+            "values": [
+                {"userEnteredValue": {"stringValue": month.get("name")}},
+            ]
+        })
+
+        for letter in column_letter:
+            
+            rows[i]["values"].append({"userEnteredValue": {"formulaValue": f"={letter}{month.get("row_number")}"}})
+    
+    return rows
 
 def change_keys_dict_list(list_dicts, directions):
     

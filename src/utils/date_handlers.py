@@ -1,7 +1,16 @@
 import calendar
 from datetime import datetime, timedelta
 
-from .get_range_iso_date import get_range_iso_date
+#Global current Date
+CURRENT_DATE = datetime.now().replace(hour=23, minute=59, second=59, microsecond=0)
+
+def get_range_iso_date(start, end=CURRENT_DATE):
+
+    # Format date -> ISO for last 4 weeks
+    date_start = start.isoformat() + "+00:00"
+    date_end = end.isoformat() + "+00:00"
+
+    return (date_start, date_end)
 
 def get_monthly_range_date(month):
     #Global date same time
@@ -27,21 +36,3 @@ def get_monthly_range_date(month):
 
     # Return formated date ranges
     return get_range_iso_date(starting_date, ending_date)
-
-def get_base_graphic_compare_table(months, column_letter):
-
-    rows = []
-    
-    for i, month in enumerate(months):
-        rows.append({
-            "values": [
-                {"userEnteredValue": {"stringValue": month.get("name")}},
-            ]
-        })
-
-        for letter in column_letter:
-            
-            rows[i]["values"].append({"userEnteredValue": {"formulaValue": f"={letter}{month.get("row_number")}"}})
-    
-    return rows
-    

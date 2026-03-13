@@ -4,7 +4,7 @@ from src.sheet.api_connection import connected_sheet
 from src.metricool.sheet_data import profile_specs, spanish_months
 from src.metricool.api_data_mimesa_2 import get_gender, get_age, get_detalles_ig, get_followers, get_metrics_st, get_competitors
 
-from src.metricool.get_monthly_range_date import get_base_graphic_compare_table
+from src.utils.data_handlers import get_base_graphic_compare_table
 
 import json
 
@@ -596,11 +596,9 @@ def generate_competitors(month, blog_id, worksheets):
     return requests
     
 
-def create_report_2(month, blog_id):
+def create_report(month, blog_id):
     
     worksheets = [comp.get("worksheets") for comp in profile_specs if comp.get("name") == blog_id.get("name")][0]
-
-    print(blog_id)
     
     requests = [
         generate_details_IG(month, blog_id, worksheets),

@@ -5,8 +5,8 @@ from functools import reduce
 
 from .api_requests import get_instagram
 from .sheet_data import spanish_months
-from .get_monthly_range_date import get_monthly_range_date
-from .dict_key_change import change_keys_dict_list
+from src.utils.date_handlers import get_monthly_range_date
+from src.utils.data_handlers import change_keys_dict_list
     # ----------------------------------------------
 
 # Load environment variables from .env file
@@ -60,25 +60,31 @@ def get_gender(month, blog_id):
         "to": date_ranges[1],
     }
 
-    demographic_gender = get_instagram(url, headers, params)
+    try: 
 
-    demographic_gender = [{item["key"]: item["value"]} for item in demographic_gender["data"]]
+        demographic_gender = get_instagram(url, headers, params)
 
-    key_changes = {
-        "M": "Masculino",
-        "F": "Femenino",
-        "U": "Desconocido",
-    }
+        demographic_gender = [{item["key"]: item["value"]} for item in demographic_gender["data"]]
 
-    demographic_gender = change_keys_dict_list(demographic_gender, key_changes)
+        key_changes = {
+            "M": "Masculino",
+            "F": "Femenino",
+            "U": "Desconocido",
+        }
 
-    demographic_gender = list(map(lambda gend: {"values": [
-        {"userEnteredValue": {"stringValue": list(gend.keys())[0]}},
-        {"userEnteredValue": {"numberValue": list(gend.values())[0]}}
-    ]}, demographic_gender))
+        demographic_gender = change_keys_dict_list(demographic_gender, key_changes)
+
+        demographic_gender = list(map(lambda gend: {"values": [
+            {"userEnteredValue": {"stringValue": list(gend.keys())[0]}},
+            {"userEnteredValue": {"numberValue": list(gend.values())[0]}}
+        ]}, demographic_gender))
+        
+        return demographic_gender
     
-    return demographic_gender
-
+    except Exception as error:
+        print("===============================")
+        print("Something bad happend here:")
+        print(error)
 
 # # Distribución por EDAD de toda la cuenta durante un período de tiempo (start_date y end_date) provenientes de range_date
 
@@ -100,19 +106,25 @@ def get_age(month, blog_id):
         "to": date_ranges[1],
     }
 
-    demographic_age = get_instagram(url, headers, params)
+    try:
 
-    demographic_age = [{item["key"]: item["value"]} for item in demographic_age["data"]]
+        demographic_age = get_instagram(url, headers, params)
 
-    demographic_age = sorted(demographic_age, key=lambda d: int(list(d.keys())[0].split('-')[0].split('+')[0]))
+        demographic_age = [{item["key"]: item["value"]} for item in demographic_age["data"]]
 
-    demographic_age = list(map(lambda age: {"values": [
-        {"userEnteredValue": {"stringValue": list(age.keys())[0]}},
-        {"userEnteredValue": {"numberValue": list(age.values())[0]}}
-    ]}, demographic_age))
+        demographic_age = sorted(demographic_age, key=lambda d: int(list(d.keys())[0].split('-')[0].split('+')[0]))
 
-    return demographic_age
+        demographic_age = list(map(lambda age: {"values": [
+            {"userEnteredValue": {"stringValue": list(age.keys())[0]}},
+            {"userEnteredValue": {"numberValue": list(age.values())[0]}}
+        ]}, demographic_age))
 
+        return demographic_age
+    
+    except Exception as error:
+        print("===============================")
+        print("Something bad happend here:")
+        print(error)
 
 # ----------------------------------------------------
 # Get Basic data from posts and reels of instagram
@@ -132,111 +144,118 @@ def get_detalles_ig(month, blog_id, worksheets):
         "to": date_ranges[1],
     }
 
-    instagram_posts = get_instagram(url, headers, params)
+    try:
 
-    endpoint = "/v2/analytics/reels/instagram"
-    url = f"{BASE_URL}{endpoint}"
+        instagram_posts = get_instagram(url, headers, params)
 
-    instagram_reels = get_instagram(url, headers, params)
+        endpoint = "/v2/analytics/reels/instagram"
+        url = f"{BASE_URL}{endpoint}"
 
-    detalles_ig_data = []
+        instagram_reels = get_instagram(url, headers, params)
 
-    # cleaning the data to be used
-    for post in instagram_posts.get("data"):
-        detalles_ig_data.append({
-            "meta":{
-                "type": "post",
-                "publishedAt": datetime.fromisoformat(post.get("publishedAt").get("dateTime")),
-            },
+        detalles_ig_data = []
 
-             "data": [
-                {"type": "numberValue", "content": post.get("likes")}, #ME GUSTAS
-                {"type": "numberValue", "content": post.get("comments")}, #COMENTARIOS
-                {"type": "numberValue", "content": post.get("shares")}, #COMPARTIDOS
-                {"type": "numberValue", "content": post.get("saved")}, #GUARDADOS
-                {"type": "stringValue", "content": post.get("")}, #REPOSTEOS
-                {"type": "numberValue", "content": post.get("reach")}, #ALCANCE POSTS
-                {"type": "stringValue", "content": ""}, #ALCANCE REELS
-                {"type": "numberValue", "content": post.get("views")}, #VISUALIZACIONES POSTS
-                {"type": "stringValue", "content": ""}, #VISUALIZACIONES REELS
-                {"type": "formulaValue", "content": "INSERT FÓRMULA"}, #VISUALIZACIONES TOTALES
-                {"type": "stringValue", "content": ""}, #VISTAS AL PERFIL
-                {"type": "formulaValue", "content": "INSERT FÓRMULA"}, #INTERACCIONES
-                {"type": "formulaValue", "content": "INSERT FÓRMULA"}, #ALCANCE TOTAL
-                {"type": "numberValue", "content": post.get("engagement")}, #ENGAGEMENT
-            ]
+        # cleaning the data to be used
+        for post in instagram_posts.get("data"):
+            detalles_ig_data.append({
+                "meta":{
+                    "type": "post",
+                    "publishedAt": datetime.fromisoformat(post.get("publishedAt").get("dateTime")),
+                },
 
-        })
+                "data": [
+                    {"type": "numberValue", "content": post.get("likes")}, #ME GUSTAS
+                    {"type": "numberValue", "content": post.get("comments")}, #COMENTARIOS
+                    {"type": "numberValue", "content": post.get("shares")}, #COMPARTIDOS
+                    {"type": "numberValue", "content": post.get("saved")}, #GUARDADOS
+                    {"type": "stringValue", "content": post.get("")}, #REPOSTEOS
+                    {"type": "numberValue", "content": post.get("reach")}, #ALCANCE POSTS
+                    {"type": "stringValue", "content": ""}, #ALCANCE REELS
+                    {"type": "numberValue", "content": post.get("views")}, #VISUALIZACIONES POSTS
+                    {"type": "stringValue", "content": ""}, #VISUALIZACIONES REELS
+                    {"type": "formulaValue", "content": "INSERT FÓRMULA"}, #VISUALIZACIONES TOTALES
+                    {"type": "stringValue", "content": ""}, #VISTAS AL PERFIL
+                    {"type": "formulaValue", "content": "INSERT FÓRMULA"}, #INTERACCIONES
+                    {"type": "formulaValue", "content": "INSERT FÓRMULA"}, #ALCANCE TOTAL
+                    {"type": "numberValue", "content": post.get("engagement")}, #ENGAGEMENT
+                ]
 
-    for reel in instagram_reels.get("data"):
-        detalles_ig_data.append({
-            "meta":{
-                "type": "reel",
-                "publishedAt": datetime.fromisoformat(reel.get("publishedAt").get("dateTime")),
-            },
-            "data":[
+            })
 
-                {"type": "numberValue", "content": reel.get("likes")}, #ME GUSTAS
-                {"type": "numberValue", "content": reel.get("comments")}, #COMENTARIOS
-                {"type": "numberValue", "content": reel.get("shares")}, #COMPARTIDOS
-                {"type": "numberValue", "content": reel.get("saved")}, #GUARDADOS
-                {"type": "numberValue", "content": reel.get("reposts")}, #REPOSTEOS
-                {"type": "stringValue", "content": ""}, #ALCANCE POSTS
-                {"type": "numberValue", "content": reel.get("reach")}, #ALCANCE REELS
-                {"type": "stringValue", "content": ""}, #VISUALIZACIONES POSTS
-                {"type": "numberValue", "content": reel.get("views")}, #VISUALIZACIONES REELS
-                {"type": "formulaValue", "content": "INSERT FÓRMULA"}, #VISUALIZACIONES TOTALES
-                {"type": "stringValue", "content": ""}, #VISTAS AL PERFIL
-                {"type": "formulaValue", "content": "INSERT FÓRMULA"}, #INTERACCIONES
-                {"type": "formulaValue", "content": "INSERT FÓRMULA"}, #ALCANCE TOTAL
-                {"type": "numberValue", "content": reel.get("engagement")}, #ENGAGEMENT
-            ]
+        for reel in instagram_reels.get("data"):
+            detalles_ig_data.append({
+                "meta":{
+                    "type": "reel",
+                    "publishedAt": datetime.fromisoformat(reel.get("publishedAt").get("dateTime")),
+                },
+                "data":[
 
-        })
+                    {"type": "numberValue", "content": reel.get("likes")}, #ME GUSTAS
+                    {"type": "numberValue", "content": reel.get("comments")}, #COMENTARIOS
+                    {"type": "numberValue", "content": reel.get("shares")}, #COMPARTIDOS
+                    {"type": "numberValue", "content": reel.get("saved")}, #GUARDADOS
+                    {"type": "numberValue", "content": reel.get("reposts")}, #REPOSTEOS
+                    {"type": "stringValue", "content": ""}, #ALCANCE POSTS
+                    {"type": "numberValue", "content": reel.get("reach")}, #ALCANCE REELS
+                    {"type": "stringValue", "content": ""}, #VISUALIZACIONES POSTS
+                    {"type": "numberValue", "content": reel.get("views")}, #VISUALIZACIONES REELS
+                    {"type": "formulaValue", "content": "INSERT FÓRMULA"}, #VISUALIZACIONES TOTALES
+                    {"type": "stringValue", "content": ""}, #VISTAS AL PERFIL
+                    {"type": "formulaValue", "content": "INSERT FÓRMULA"}, #INTERACCIONES
+                    {"type": "formulaValue", "content": "INSERT FÓRMULA"}, #ALCANCE TOTAL
+                    {"type": "numberValue", "content": reel.get("engagement")}, #ENGAGEMENT
+                ]
 
-    # Ordering the publications by published date (newest to oldest)
-    detalles_ig_data.sort(key=lambda pub: pub.get("meta").get("publishedAt"), reverse=False) #Reverse for the order
+            })
 
-    # Setting Formulas
-    for i, pub in enumerate(detalles_ig_data):
-        # Sum Visualizaciones_Totales
-        pub.get("data")[9]["content"] = f"=IFERROR(SUM(I{8 + i}:J{8 + i}), \"\")"
+        # Ordering the publications by published date (newest to oldest)
+        detalles_ig_data.sort(key=lambda pub: pub.get("meta").get("publishedAt"), reverse=False) #Reverse for the order
 
-        # Sum Interacciones_Totales
-        pub.get("data")[11]["content"] = f"=IFERROR(SUM(B{8 + i}:E{8 + i}), \"\")"
+        # Setting Formulas
+        for i, pub in enumerate(detalles_ig_data):
+            # Sum Visualizaciones_Totales
+            pub.get("data")[9]["content"] = f"=IFERROR(SUM(I{8 + i}:J{8 + i}), \"\")"
 
-        # Sum Alcance_Total
-        pub.get("data")[12]["content"] = f"=IFERROR(SUM(G{8 + i}:H{8 + i}), \"\")"
-        
-    # Building API Request
-    detalles_ig_data_rows = list(map(lambda media: {"values": [
-        {"userEnteredValue": {metric.get("type"): metric.get("content")}} for metric in media.get("data")
-    ]}, detalles_ig_data))
+            # Sum Interacciones_Totales
+            pub.get("data")[11]["content"] = f"=IFERROR(SUM(B{8 + i}:E{8 + i}), \"\")"
 
-    # Adding column row number to each row
-    list(map(lambda media: media[1].get("values").insert(0,{"userEnteredValue": {"numberValue": (media[0] + 1)}}), enumerate(detalles_ig_data_rows)))
+            # Sum Alcance_Total
+            pub.get("data")[12]["content"] = f"=IFERROR(SUM(G{8 + i}:H{8 + i}), \"\")"
+            
+        # Building API Request
+        detalles_ig_data_rows = list(map(lambda media: {"values": [
+            {"userEnteredValue": {metric.get("type"): metric.get("content")}} for metric in media.get("data")
+        ]}, detalles_ig_data))
 
-    # Storing Persisting data
-    stored_data["publications"] = len(detalles_ig_data_rows)
-    stored_data["total_views"] = reduce(lambda acc, row: acc + (row.get("data")[7].get("content") if row.get("meta").get("type") == 'post' else row.get("data")[8].get("content")), detalles_ig_data, 0)
-    stored_data["interactions"] = reduce(lambda acc, row: acc + row.get("data")[0].get("content") + row.get("data")[1].get("content") + row.get("data")[2].get("content") + row.get("data")[3].get("content"), detalles_ig_data, 0)
-    stored_data["profile_views"] = 0
-    stored_data["engagement"] = reduce(lambda acc, row: acc + (row.get("data")[13].get("content")), detalles_ig_data, 0) / len(detalles_ig_data_rows)
+        # Adding column row number to each row
+        list(map(lambda media: media[1].get("values").insert(0,{"userEnteredValue": {"numberValue": (media[0] + 1)}}), enumerate(detalles_ig_data_rows)))
 
-    #######################################################################################################
-    # Interations without ads:
-    interactions_without_ads = get_interactions_without_ads(detalles_ig_data, month, worksheets)
-    #######################################################################################################
-    # Metrics without ads:
-    metrics_without_ads = get_metrics_without_ads(stored_data, detalles_ig_data, month, worksheets)
+        # Storing Persisting data
+        stored_data["publications"] = len(detalles_ig_data_rows)
+        stored_data["total_views"] = reduce(lambda acc, row: acc + (row.get("data")[7].get("content") if row.get("meta").get("type") == 'post' else row.get("data")[8].get("content")), detalles_ig_data, 0)
+        stored_data["interactions"] = reduce(lambda acc, row: acc + row.get("data")[0].get("content") + row.get("data")[1].get("content") + row.get("data")[2].get("content") + row.get("data")[3].get("content"), detalles_ig_data, 0)
+        stored_data["profile_views"] = 0
+        stored_data["engagement"] = reduce(lambda acc, row: acc + (row.get("data")[13].get("content")), detalles_ig_data, 0) / len(detalles_ig_data_rows)
 
-    all_data = {
-        "detalles_ig": detalles_ig_data_rows,
-        "interactions_without_ads": interactions_without_ads,
-        "metrics_without_ads": metrics_without_ads
-    }
+        #######################################################################################################
+        # Interations without ads:
+        interactions_without_ads = get_interactions_without_ads(detalles_ig_data, month, worksheets)
+        #######################################################################################################
+        # Metrics without ads:
+        metrics_without_ads = get_metrics_without_ads(stored_data, detalles_ig_data, month, worksheets)
 
-    return all_data
+        all_data = {
+            "detalles_ig": detalles_ig_data_rows,
+            "interactions_without_ads": interactions_without_ads,
+            "metrics_without_ads": metrics_without_ads
+        }
+
+        return all_data
+    
+    except Exception as error:
+        print("===============================")
+        print("Something bad happend here:")
+        print(error)
 
 # -----------------------------------------------------
 # 
@@ -395,37 +414,43 @@ def get_metrics_st(month, blog_id):
         "to": date_ranges[1],
     }
 
-    instagram_stories = get_instagram(url, headers, params)
+    try: 
 
-    stories_data = list(map(lambda storie: {"reach": storie.get("reach"), "impressions": storie.get("impressions")}, instagram_stories.get("data")))
+        instagram_stories = get_instagram(url, headers, params)
 
-    all_impressions = reduce(lambda acc, storie: acc + storie.get("impressions"), stories_data, 0)
-    all_reach = reduce(lambda acc, storie: acc + storie.get("reach"), stories_data, 0)
+        stories_data = list(map(lambda storie: {"reach": storie.get("reach"), "impressions": storie.get("impressions")}, instagram_stories.get("data")))
 
-    stories_data = [month.get("name"), all_impressions, "INSERT FÓRMULA", "", all_reach, "INSERT FÓRMULA", "", len(stories_data), "INSERT FÓRMULA"]
+        all_impressions = reduce(lambda acc, storie: acc + storie.get("impressions"), stories_data, 0)
+        all_reach = reduce(lambda acc, storie: acc + storie.get("reach"), stories_data, 0)
 
-    # Apply Fórmulas
-    current_row = month.get("number") + 3
-    row_to_compare = spanish_months.index(spanish_months[month.get("number") - 2]) + 4
+        stories_data = [month.get("name"), all_impressions, "INSERT FÓRMULA", "", all_reach, "INSERT FÓRMULA", "", len(stories_data), "INSERT FÓRMULA"]
 
-    stories_data[2] = get_formula("B", current_row, row_to_compare)
-    stories_data[5] = get_formula("E", current_row, row_to_compare)
-    stories_data[8] = get_formula("H", current_row, row_to_compare)
+        # Apply Fórmulas
+        current_row = month.get("number") + 3
+        row_to_compare = spanish_months.index(spanish_months[month.get("number") - 2]) + 4
 
-    stories_data = [{"values": [
-        {"userEnteredValue": {"stringValue": stories_data[0]}},
-        {"userEnteredValue": {"numberValue": stories_data[1]}},
-        {"userEnteredValue": {"formulaValue": stories_data[2]}},
-        {"userEnteredValue": {"stringValue": stories_data[3]}},
-        {"userEnteredValue": {"numberValue": stories_data[4]}},
-        {"userEnteredValue": {"formulaValue": stories_data[5]}},
-        {"userEnteredValue": {"stringValue": stories_data[6]}},
-        {"userEnteredValue": {"numberValue": stories_data[7]}},
-        {"userEnteredValue": {"formulaValue": stories_data[8]}},
-    ]}]
+        stories_data[2] = get_formula("B", current_row, row_to_compare)
+        stories_data[5] = get_formula("E", current_row, row_to_compare)
+        stories_data[8] = get_formula("H", current_row, row_to_compare)
 
-    return stories_data
+        stories_data = [{"values": [
+            {"userEnteredValue": {"stringValue": stories_data[0]}},
+            {"userEnteredValue": {"numberValue": stories_data[1]}},
+            {"userEnteredValue": {"formulaValue": stories_data[2]}},
+            {"userEnteredValue": {"stringValue": stories_data[3]}},
+            {"userEnteredValue": {"numberValue": stories_data[4]}},
+            {"userEnteredValue": {"formulaValue": stories_data[5]}},
+            {"userEnteredValue": {"stringValue": stories_data[6]}},
+            {"userEnteredValue": {"numberValue": stories_data[7]}},
+            {"userEnteredValue": {"formulaValue": stories_data[8]}},
+        ]}]
 
+        return stories_data
+    
+    except Exception as error:
+        print("===============================")
+        print("Something bad happend here:")
+        print(error)
 
 # -----------------------------------------------------
 def get_competitors(month, blog_id, current_worksheet):
@@ -444,77 +469,69 @@ def get_competitors(month, blog_id, current_worksheet):
         "to": date_ranges[1],
     }
 
-    instagram_competitors = get_instagram(url, headers, params)
+    try:
+        
+        instagram_competitors = get_instagram(url, headers, params)
 
-    # getting the data from sheet_data.py
-    competitors_order = list(map(lambda comp: comp.get("providerId"), current_worksheet.get("data")))
+        # getting the data from sheet_data.py
+        competitors_order = list(map(lambda comp: comp.get("providerId"), current_worksheet.get("data")))
 
-    # Cleaning and filtering data
-    competitors_data = [
-        {
-            "providerId": comp.get("providerId"), 
-            "followers": comp.get("followers") or 0, 
-            "posts": (comp.get("posts") or 0) + (comp.get("reels") or 0), 
-            "likes": comp.get("likes") or 0, 
-            "comments": comp.get("comments") or 0, 
-            "engagement": comp.get("engagement") or 0
-        } for comp in instagram_competitors.get("data") if comp.get("providerId") in competitors_order]
-
-    # Ordering competitors
-    competitors_data = sorted(competitors_data, key=lambda comp: competitors_order.index(comp.get("providerId")))
-
-    formula_columns = list(map(lambda comp: comp.get("formula_index"), current_worksheet.get("data")))
-
-    column_titles = list(map(lambda comp: comp.get("name"), current_worksheet.get("data")))
-
-    column_titles = [sub_item for title in column_titles for sub_item in (title, "%")]
-
-    competitors_tables_data = {
-        "titles": [
+        # Cleaning and filtering data
+        competitors_data = [
             {
-                "values": list(map(lambda name: {"userEnteredValue": {"stringValue": name}}, column_titles))
+                "providerId": comp.get("providerId"), 
+                "followers": comp.get("followers") or 0, 
+                "posts": (comp.get("posts") or 0) + (comp.get("reels") or 0), 
+                "likes": comp.get("likes") or 0, 
+                "comments": comp.get("comments") or 0, 
+                "engagement": comp.get("engagement") or 0
+            } for comp in instagram_competitors.get("data") if comp.get("providerId") in competitors_order]
+
+        # Ordering competitors
+        competitors_data = sorted(competitors_data, key=lambda comp: competitors_order.index(comp.get("providerId")))
+
+        formula_columns = list(map(lambda comp: comp.get("formula_index"), current_worksheet.get("data")))
+
+        column_titles = list(map(lambda comp: comp.get("name"), current_worksheet.get("data")))
+
+        column_titles = [sub_item for title in column_titles for sub_item in (title, "%")]
+
+        competitors_tables_data = {
+            "titles": [
+                {
+                    "values": list(map(lambda name: {"userEnteredValue": {"stringValue": name}}, column_titles))
+                }
+            ],
+            "data": {
+                category["name"]: [
+                    {"values": [
+                        {"userEnteredValue": {"stringValue": month.get("name")}}
+                    ]}
+                ] for category in current_worksheet.get("tables_data") 
             }
-        ],
-        "data": {
-            category["name"]: [
-                {"values": [
-                    {"userEnteredValue": {"stringValue": month.get("name")}}
-                ]}
-            ] for category in current_worksheet.get("tables_data") 
         }
-    }
-    
 
-    # for each table we need to create a distribution of competitors data
-    # for comp in competitors_data:
-    #     i = 0
-    #     for key, table in competitors_tables_data.get("data").items(): 
-    #         # Value
-    #         table[0].get("values").append({"userEnteredValue": {"numberValue": comp.get(key)}}) 
+        for key, table in competitors_tables_data.get("data").items():
+            
+            for comp in competitors_data:
+                # Value
+                table[0].get("values").append({"userEnteredValue": {"numberValue": comp.get(key)}})
 
-    #         # Formula
-    #         formula = get_formula(formula_columns[i], month.get("number") + current_worksheet.get("tables_data")[i].get("row_starting_position"), spanish_months.index(spanish_months[month.get("number") - 2]) + current_worksheet.get("tables_data")[i].get("row_starting_position") + 1)
+                # Formula
+                formula_letter = [brand.get("formula_index") for brand in current_worksheet.get("data") if comp.get("providerId") == brand.get("providerId")][0]
+                current_row = month.get("number") + [metric.get("row_starting_position") for metric in current_worksheet.get("tables_data") if metric.get("name") == key][0]
+                row_to_compare = spanish_months.index(spanish_months[month.get("number") - 2]) + [metric.get("row_starting_position") for metric in current_worksheet.get("tables_data") if metric.get("name") == key][0] + 1
 
-    #         table[0].get("values").append({"userEnteredValue": {"formulaValue": formula}}) 
+                formula = get_formula(formula_letter, current_row, row_to_compare)
 
-    #         i += 1
-
-    for key, table in competitors_tables_data.get("data").items():
+                table[0].get("values").append({"userEnteredValue": {"formulaValue": formula}}) 
+            
         
-        for comp in competitors_data:
-            # Value
-            table[0].get("values").append({"userEnteredValue": {"numberValue": comp.get(key)}})
-
-            # Formula
-            formula_letter = [brand.get("formula_index") for brand in current_worksheet.get("data") if comp.get("providerId") == brand.get("providerId")][0]
-            current_row = month.get("number") + [metric.get("row_starting_position") for metric in current_worksheet.get("tables_data") if metric.get("name") == key][0]
-            row_to_compare = spanish_months.index(spanish_months[month.get("number") - 2]) + [metric.get("row_starting_position") for metric in current_worksheet.get("tables_data") if metric.get("name") == key][0] + 1
-
-            formula = get_formula(formula_letter, current_row, row_to_compare)
-
-            table[0].get("values").append({"userEnteredValue": {"formulaValue": formula}}) 
-        
+        return competitors_tables_data
     
-    return competitors_tables_data
+    except Exception as error:
+        print("===============================")
+        print("Something bad happend here:")
+        print(error)
 
 # -------------------------------------------------

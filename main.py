@@ -3,7 +3,7 @@ import tkinter as tk
 
 # Modules
 from src.menu_ui.automation_app import AutomationApp
-from src.metricool.actions_2 import create_report_2
+from src.metricool.actions import create_report
 # from src.metricool.api_requests import get_charts_metadata
 
 # Get chart info for further updates and changes
@@ -13,7 +13,7 @@ root = tk.Tk()
 
 # Add actions as properties
 actions = {
-    'create_report': create_report_2
+    'create_report': create_report
 }
 
 app = AutomationApp(root, actions)
