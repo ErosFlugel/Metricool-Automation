@@ -7,7 +7,7 @@ from src.metricool.actions_2 import create_report_2
 # from src.metricool.api_requests import get_charts_metadata
 
 # Get chart info for further updates and changes
-# get_charts_metadata()
+# get_charts_metadata("INSERT THE SHEET ID HERE")
 
 root = tk.Tk()
 

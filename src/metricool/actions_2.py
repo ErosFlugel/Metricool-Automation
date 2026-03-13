@@ -1,6 +1,6 @@
 # Work when imported by main.py
 
-from src.sheet.api_connection import sheet
+from src.sheet.api_connection import connected_sheet
 from src.metricool.sheet_data import profile_specs, spanish_months
 from src.metricool.api_data_mimesa_2 import get_gender, get_age, get_detalles_ig, get_followers, get_metrics_st, get_competitors
 
@@ -44,6 +44,25 @@ def generate_details_IG(month, blog_id, worksheets):
                 },
                 "fields": "userEnteredValue"
             },
+        },
+        { #MONTH TITLE
+            "updateCells": {
+                "rows": [
+                    {
+                        "values": [
+                            {"userEnteredValue": {"stringValue": month.get("name")}}
+                        ]
+                    }
+                ],
+                "fields": "userEnteredValue",
+                "range": {
+                    "sheetId": worksheet_id,
+                    "startRowIndex": 1,
+                    "startColumnIndex": 0,
+                    "endColumnIndex": 1,
+                    "endRowIndex": 2,
+                }
+            }
         },
         {
             "updateCells": {
@@ -479,7 +498,7 @@ def generate_competitors(month, blog_id, worksheets):
 
     requests = []
 
-    for row in competitors_tables_data: 
+    for i, row in enumerate(competitors_tables_data): 
 
         # Main table limits
         row_starting_position = row.get("row_starting_position")
@@ -519,6 +538,8 @@ def generate_competitors(month, blog_id, worksheets):
 
         # GRAPHICS
 
+        chart_data = current_worksheet.get("charts")[i].get("table_source")
+
         # Titles
         clean_titles = [{"values": [title for title in data.get("titles")[0].get("values") if title.get("userEnteredValue").get("stringValue") != "%"]}]
         data_column_amount = len(clean_titles[0].get("values"))
@@ -529,10 +550,10 @@ def generate_competitors(month, blog_id, worksheets):
                 "fields": "userEnteredValue",
                 "range": {
                     "sheetId": worksheet_id,
-                    "startRowIndex": row_starting_position - 1,
-                    "startColumnIndex": 26,
-                    "endColumnIndex": (26 + data_column_amount),
-                    "endRowIndex": row_starting_position,
+                    "startRowIndex": chart_data.get("row_starting_position") - 1,
+                    "startColumnIndex": chart_data.get("column_starting_position"),
+                    "endColumnIndex": (chart_data.get("column_starting_position") + data_column_amount),
+                    "endRowIndex": chart_data.get("row_starting_position"),
                 }
             }
         })
@@ -564,10 +585,10 @@ def generate_competitors(month, blog_id, worksheets):
                 "fields": "userEnteredValue",
                 "range": {
                     "sheetId": worksheet_id,
-                    "startRowIndex": row_starting_position,
-                    "startColumnIndex":25,
-                    "endColumnIndex": (25 + data_column_amount + 1),
-                    "endRowIndex": row_starting_position + len(compare_months),
+                    "startRowIndex": chart_data.get("row_starting_position"),
+                    "startColumnIndex": chart_data.get("column_starting_position") - 1,
+                    "endColumnIndex": ((chart_data.get("column_starting_position") - 1) + data_column_amount + 1),
+                    "endRowIndex": chart_data.get("row_starting_position") + len(compare_months),
                 }
             }
         })
@@ -577,7 +598,9 @@ def generate_competitors(month, blog_id, worksheets):
 
 def create_report_2(month, blog_id):
     
-    worksheets = profile_specs.get("TOYOTA").get("spreadsheet").get("worksheets")
+    worksheets = [comp.get("worksheets") for comp in profile_specs if comp.get("name") == blog_id.get("name")][0]
+
+    print(blog_id)
     
     requests = [
         generate_details_IG(month, blog_id, worksheets),
@@ -589,6 +612,7 @@ def create_report_2(month, blog_id):
 
     if len(requests) > 0:
         
+        sheet = connected_sheet(blog_id.get("sheet-id"))
         sheet.batch_update({"requests": requests})
 
     print("---BUILD COMPLETE---")

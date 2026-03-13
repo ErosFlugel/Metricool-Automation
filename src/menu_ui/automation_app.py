@@ -6,7 +6,7 @@ import os
 import threading
 import traceback
 
-from src.metricool.sheet_data import companies, spanish_months
+from src.metricool.sheet_data import profile_specs, spanish_months
 
 # Load environment variables from .env file
 load_dotenv()
@@ -84,7 +84,7 @@ class AutomationApp:
 
         # Combobox (companies dropdown)
 
-        self.companies = companies
+        self.companies = list(map(lambda comp: comp.get("name"), profile_specs))
 
         self.company_var = tk.StringVar()
         self.company_combo = ttk.Combobox(
@@ -176,7 +176,7 @@ class AutomationApp:
         """Handle report generation logic"""
         try:
             selected_month_number = {"name": self.month_var.get(), "number": self.months.index(self.month_var.get()) + 1}
-            blog_id = {"name": self.company_var.get(), "code": os.getenv(f"BLOG_ID_{self.company_var.get()}")}
+            blog_id = {"name": self.company_var.get(), "code": os.getenv(f"BLOG_ID_{self.company_var.get()}"), "sheet-id": [comp.get("id") for comp in profile_specs if comp.get("name") == self.company_var.get()][0]}
 
             # Execute the action provided in the constructor
             self.actions['create_report'](selected_month_number, blog_id)

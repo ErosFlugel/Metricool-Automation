@@ -486,18 +486,34 @@ def get_competitors(month, blog_id, current_worksheet):
     
 
     # for each table we need to create a distribution of competitors data
-    for comp in competitors_data:
-        i = 0
-        for key, table in competitors_tables_data.get("data").items(): 
+    # for comp in competitors_data:
+    #     i = 0
+    #     for key, table in competitors_tables_data.get("data").items(): 
+    #         # Value
+    #         table[0].get("values").append({"userEnteredValue": {"numberValue": comp.get(key)}}) 
+
+    #         # Formula
+    #         formula = get_formula(formula_columns[i], month.get("number") + current_worksheet.get("tables_data")[i].get("row_starting_position"), spanish_months.index(spanish_months[month.get("number") - 2]) + current_worksheet.get("tables_data")[i].get("row_starting_position") + 1)
+
+    #         table[0].get("values").append({"userEnteredValue": {"formulaValue": formula}}) 
+
+    #         i += 1
+
+    for key, table in competitors_tables_data.get("data").items():
+        
+        for comp in competitors_data:
             # Value
-            table[0].get("values").append({"userEnteredValue": {"numberValue": comp.get(key)}}) 
+            table[0].get("values").append({"userEnteredValue": {"numberValue": comp.get(key)}})
 
             # Formula
-            formula = get_formula(formula_columns[i], month.get("number") + current_worksheet.get("tables_data")[i].get("row_starting_position"), spanish_months.index(spanish_months[month.get("number") - 2]) + current_worksheet.get("tables_data")[i].get("row_starting_position") + 1)
+            formula_letter = [brand.get("formula_index") for brand in current_worksheet.get("data") if comp.get("providerId") == brand.get("providerId")][0]
+            current_row = month.get("number") + [metric.get("row_starting_position") for metric in current_worksheet.get("tables_data") if metric.get("name") == key][0]
+            row_to_compare = spanish_months.index(spanish_months[month.get("number") - 2]) + [metric.get("row_starting_position") for metric in current_worksheet.get("tables_data") if metric.get("name") == key][0] + 1
+
+            formula = get_formula(formula_letter, current_row, row_to_compare)
 
             table[0].get("values").append({"userEnteredValue": {"formulaValue": formula}}) 
-
-            i += 1
+        
     
     return competitors_tables_data
 

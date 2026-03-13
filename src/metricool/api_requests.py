@@ -2,7 +2,7 @@ import requests
 import json
 from datetime import datetime
 
-from src.sheet.api_connection import sheet as sh
+from src.sheet.api_connection import connected_sheet
 
 FLAG = False
 
@@ -61,11 +61,14 @@ def get_instagram(url, headers, params, query=None):
         
     return 
 
-def get_charts_metadata():
+def get_charts_metadata(sheet_id):
+    sh = connected_sheet(sheet_id)
     # 1. Fetch the metadata for the entire spreadsheet
     metadata = sh.fetch_sheet_metadata()
 
-    # print(json.dumps(metadata, indent=4))
+    # OPTIONAL - print the metadata of each sheet to check sheet ids
+    # shpreadsheet_data = list(map(lambda sh: sh.get("properties"), metadata.get("sheets")))
+    # print(json.dumps(shpreadsheet_data, indent=4))
 
     chart_info = []
 
@@ -87,5 +90,5 @@ def get_charts_metadata():
                 })
 
     # 3. View your results
-    for item in chart_info:
-        print(f"Sheet: {item['sheet_name']} | Chart Title: {item['title']} | ID: {item['chart_id']}")
+    # for item in chart_info:
+    #     print(f"Sheet: {item['sheet_name']} | Chart Title: {item['title']} | ID: {item['chart_id']}")
