@@ -2,7 +2,7 @@
 
 from src.sheet.api_connection import connected_sheet
 from src.sheet.sheet_data import profile_specs, spanish_months
-from src.metricool.api_data_mimesa_2 import get_gender, get_age, get_detalles_ig, get_followers, get_metrics_st, get_competitors
+from src.metricool.api_data_mimesa import get_gender, get_age, get_detalles_ig, get_followers, get_metrics_st, get_competitors
 
 from src.utils.data_handlers import get_base_graphic_compare_table
 
@@ -16,11 +16,11 @@ def generate_details_IG(month, blog_id, worksheets):
     # api_data
     combo_details_ig_data = get_detalles_ig(month, blog_id, worksheets)
 
-    details_ig_data = combo_details_ig_data.get("detalles_ig")
-
     # Code guard
-    if not details_ig_data:
+    if (not combo_details_ig_data) or (not combo_details_ig_data.get("detalles_ig")):
         return
+
+    details_ig_data = combo_details_ig_data.get("detalles_ig")
 
     # table limits
     posts_and_reels_without_ads_starting_row = current_worksheet.get("tables_data")[0].get("row_starting_position")

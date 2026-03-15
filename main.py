@@ -1,10 +1,19 @@
-
 import tkinter as tk
+import sys
+import os
 
 # Modules
 from src.menu_ui.automation_app import AutomationApp
 from src.metricool.actions import create_report
-# from src.metricool.api_requests import get_charts_metadata
+
+# Priority to external src folder:
+if getattr(sys, 'frozen', False):
+    application_path = os.path.dirname(sys.executable)
+else:
+    application_path = os.path.dirname(os.path.abspath(__file__))
+
+if application_path not in sys.path:
+    sys.path.insert(0, application_path)
 
 # Get chart info for further updates and changes
 # get_charts_metadata("INSERT THE SHEET ID HERE")

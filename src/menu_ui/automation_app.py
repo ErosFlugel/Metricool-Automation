@@ -7,10 +7,11 @@ import threading
 import traceback
 
 from src.sheet.sheet_data import profile_specs, spanish_months
-from src.utils.config_handlers import resource_path
+from src.utils.config_handlers import  get_application_path
 
 # Load environment variables from .env file
-env_path = resource_path(".env")
+root_dir = get_application_path(__file__)
+env_path = os.path.join(root_dir, ".env")
 load_dotenv(dotenv_path=env_path)
 
 class AutomationApp:

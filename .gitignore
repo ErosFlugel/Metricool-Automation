@@ -31,7 +31,7 @@ MANIFEST
 #  before PyInstaller builds the exe, so as to inject date/other infos into it.
 *.manifest
 *.spec
-what_are_you.iss
+Inno_setup_MetriAutomation.iss
 
 # Installer logs
 pip-log.txt

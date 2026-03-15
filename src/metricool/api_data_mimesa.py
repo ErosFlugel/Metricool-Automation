@@ -7,11 +7,12 @@ from src.metricool.api_requests import get_instagram
 from src.sheet.sheet_data import spanish_months
 from src.utils.date_handlers import get_monthly_range_date
 from src.utils.data_handlers import change_keys_dict_list
-from src.utils.config_handlers import resource_path
+from src.utils.config_handlers import get_application_path
     # ----------------------------------------------
 
 # Load environment variables from .env file
-env_path = resource_path(".env")
+root_dir = get_application_path(__file__)
+env_path = os.path.join(root_dir, ".env")
 load_dotenv(dotenv_path=env_path)
 
 # --- Configuration ---
