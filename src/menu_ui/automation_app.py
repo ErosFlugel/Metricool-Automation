@@ -6,10 +6,12 @@ import os
 import threading
 import traceback
 
-from src.metricool.sheet_data import profile_specs, spanish_months
+from src.sheet.sheet_data import profile_specs, spanish_months
+from src.utils.config_handlers import resource_path
 
 # Load environment variables from .env file
-load_dotenv()
+env_path = resource_path(".env")
+load_dotenv(dotenv_path=env_path)
 
 class AutomationApp:
     def __init__(self, root, actions):

@@ -1,7 +1,7 @@
 # Work when imported by main.py
 
 from src.sheet.api_connection import connected_sheet
-from src.metricool.sheet_data import profile_specs, spanish_months
+from src.sheet.sheet_data import profile_specs, spanish_months
 from src.metricool.api_data_mimesa_2 import get_gender, get_age, get_detalles_ig, get_followers, get_metrics_st, get_competitors
 
 from src.utils.data_handlers import get_base_graphic_compare_table

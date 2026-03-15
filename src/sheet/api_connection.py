@@ -1,12 +1,13 @@
 import gspread
 from google.oauth2.service_account import Credentials
 import os
+from src.utils.config_handlers import resource_path
 
 def connected_sheet(sheet_id):
     SCOPE = ["https://www.googleapis.com/auth/spreadsheets"]
     SHEET_ID = sheet_id
 
-    CREDS_FILE = os.path.join(os.path.dirname(__file__ ), 'credentials.json')
+    CREDS_FILE = resource_path(os.path.join(os.path.dirname(__file__ ), 'credentials.json'))
 
     # Autenticación
     creds = Credentials.from_service_account_file(CREDS_FILE, scopes=SCOPE)

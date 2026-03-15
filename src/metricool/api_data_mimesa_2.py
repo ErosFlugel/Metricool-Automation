@@ -3,14 +3,16 @@ from dotenv import load_dotenv
 from datetime import datetime
 from functools import reduce
 
-from .api_requests import get_instagram
-from .sheet_data import spanish_months
+from src.metricool.api_requests import get_instagram
+from src.sheet.sheet_data import spanish_months
 from src.utils.date_handlers import get_monthly_range_date
 from src.utils.data_handlers import change_keys_dict_list
+from src.utils.config_handlers import resource_path
     # ----------------------------------------------
 
 # Load environment variables from .env file
-load_dotenv()
+env_path = resource_path(".env")
+load_dotenv(dotenv_path=env_path)
 
 # --- Configuration ---
 BASE_URL = "https://app.metricool.com/api"

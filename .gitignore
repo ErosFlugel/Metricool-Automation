@@ -31,6 +31,7 @@ MANIFEST
 #  before PyInstaller builds the exe, so as to inject date/other infos into it.
 *.manifest
 *.spec
+what_are_you.iss
 
 # Installer logs
 pip-log.txt
@@ -209,3 +210,6 @@ __marimo__/
 # google-sheets
 credentials.json
 sheet_data.py
+
+# executables
+MetriAutomation_WINDOWS_setup.exe
