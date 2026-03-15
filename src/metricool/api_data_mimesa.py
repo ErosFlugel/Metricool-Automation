@@ -86,7 +86,7 @@ def get_gender(month, blog_id):
     
     except Exception as error:
         print("===============================")
-        print("Something bad happend here:")
+        print("Something bad happend getting gender data:")
         print(error)
 
 # # Distribución por EDAD de toda la cuenta durante un período de tiempo (start_date y end_date) provenientes de range_date
@@ -126,7 +126,7 @@ def get_age(month, blog_id):
     
     except Exception as error:
         print("===============================")
-        print("Something bad happend here:")
+        print("Something bad happend getting age data:")
         print(error)
 
 # ----------------------------------------------------
@@ -257,7 +257,7 @@ def get_detalles_ig(month, blog_id, worksheets):
     
     except Exception as error:
         print("===============================")
-        print("Something bad happend here:")
+        print("Something bad happend getting details_ig data:")
         print(error)
 
 # -----------------------------------------------------
@@ -398,7 +398,7 @@ def get_followers(month, blog_id):
 
     except Exception as error:
         print("===============================")
-        print("Something bad happend here:")
+        print("Something bad happend getting followers data:")
         print(error)
 
 # -----------------------------------------------------
@@ -452,7 +452,7 @@ def get_metrics_st(month, blog_id):
     
     except Exception as error:
         print("===============================")
-        print("Something bad happend here:")
+        print("Something bad happend getting stories metrics data:")
         print(error)
 
 # -----------------------------------------------------
@@ -534,7 +534,7 @@ def get_competitors(month, blog_id, current_worksheet):
     
     except Exception as error:
         print("===============================")
-        print("Something bad happend here:")
+        print("Something bad happend getting competitors data:")
         print(error)
 
 # -------------------------------------------------
