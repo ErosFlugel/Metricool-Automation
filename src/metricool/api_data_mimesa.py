@@ -220,7 +220,7 @@ def get_detalles_ig(month, blog_id, worksheets):
             pub.get("data")[9]["content"] = f"=IFERROR(SUM(I{8 + i}:J{8 + i}), \"\")"
 
             # Sum Interacciones_Totales
-            pub.get("data")[11]["content"] = f"=IFERROR(SUM(B{8 + i}:E{8 + i}), \"\")"
+            pub.get("data")[11]["content"] = f"=IFERROR(SUM(B{8 + i}:F{8 + i}), \"\")"
 
             # Sum Alcance_Total
             pub.get("data")[12]["content"] = f"=IFERROR(SUM(G{8 + i}:H{8 + i}), \"\")"
@@ -236,7 +236,7 @@ def get_detalles_ig(month, blog_id, worksheets):
         # Storing Persisting data
         stored_data["publications"] = len(detalles_ig_data_rows)
         stored_data["total_views"] = reduce(lambda acc, row: acc + (row.get("data")[7].get("content") if row.get("meta").get("type") == 'post' else row.get("data")[8].get("content")), detalles_ig_data, 0)
-        stored_data["interactions"] = reduce(lambda acc, row: acc + row.get("data")[0].get("content") + row.get("data")[1].get("content") + row.get("data")[2].get("content") + row.get("data")[3].get("content"), detalles_ig_data, 0)
+        stored_data["interactions"] = reduce(lambda acc, row: acc + row.get("data")[0].get("content") + row.get("data")[1].get("content") + row.get("data")[2].get("content") + row.get("data")[3].get("content") + (row.get("data")[4].get("content") if isinstance(row.get("data")[4].get("content"), int) else 0), detalles_ig_data, 0)
         stored_data["profile_views"] = 0
         stored_data["engagement"] = reduce(lambda acc, row: acc + (row.get("data")[13].get("content")), detalles_ig_data, 0) / len(detalles_ig_data_rows)
 
