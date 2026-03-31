@@ -2,7 +2,7 @@
 
 from src.sheet.api_connection import connected_sheet
 from src.sheet.sheet_data import profile_specs, spanish_months
-from src.metricool.api_data_mimesa import get_gender, get_age, get_detalles_ig, get_followers, get_metrics_st, get_competitors
+from src.metricool.api_data_mimesa import get_gender, get_age, get_detalles_ig, get_followers, get_metrics_st, get_competitors, get_detalles_st
 
 from src.utils.data_handlers import get_base_graphic_compare_table
 
@@ -98,7 +98,7 @@ def generate_followers(month, blog_id, worksheets):
     worksheet_id = current_worksheet.get("id")
 
     # api_data
-    followers_data = get_followers(month, blog_id)
+    followers_data = get_followers(month, blog_id, current_worksheet)
 
     # Code guard
     if not followers_data:
@@ -401,6 +401,77 @@ def generate_metrics_without_ads(rows_data, month, worksheets):
         })
 
     return requests
+
+def generate_details_st(month, blog_id, worksheets):
+    # Table Base
+    current_worksheet = list(filter(lambda item: item.get("title") == "Detalles ST", worksheets))[0]
+    worksheet_id = current_worksheet.get("id")
+
+    # api_data
+    stories_details_data = get_detalles_st(month, blog_id)
+
+    # Code Guard
+    if not stories_details_data:
+        return 
+    
+    # table limits
+    row_starting_position_index = current_worksheet.get("tables_data")[0].get("row_starting_position") - 1
+    starting_column_index = current_worksheet.get("tables_data")[0].get("column_starting_position") - 1
+    data_column_amount = len(stories_details_data[0].get("values"))
+    data_row_amount = len(stories_details_data)
+
+    requests = [
+        {
+            # CLEANING table
+            "repeatCell": {
+                "range": {
+                    "sheetId": worksheet_id,  # Place the worksheet ID
+                    "startRowIndex": row_starting_position_index,  # Clear from the very top
+                    "startColumnIndex": starting_column_index,
+                    # "endRowIndex": data_row_amount,
+                    "endColumnIndex": data_column_amount + 1
+                },
+                "cell": {
+                    "userEnteredValue": {} # This "empties" the cell
+                },
+                "fields": "userEnteredValue"
+            },
+        },
+        { #MONTH TITLE
+            "updateCells": {
+                "rows": [
+                    {
+                        "values": [
+                            {"userEnteredValue": {"stringValue": month.get("name")}}
+                        ]
+                    }
+                ],
+                "fields": "userEnteredValue",
+                "range": {
+                    "sheetId": worksheet_id,
+                    "startRowIndex": 1,
+                    "startColumnIndex": 1,
+                    "endColumnIndex": 2,
+                    "endRowIndex": 2,
+                }
+            }
+        },
+        {
+            "updateCells": {
+                "rows": stories_details_data,
+                "fields": "userEnteredValue",
+                "range": {
+                    "sheetId": worksheet_id,
+                    "startRowIndex": row_starting_position_index,
+                    "startColumnIndex": starting_column_index,
+                    "endColumnIndex": starting_column_index + data_column_amount,
+                    "endRowIndex": data_row_amount + row_starting_position_index,
+                }
+            }
+        }
+    ]
+
+    return requests
     
 
 def generate_metrics_st(month, blog_id, worksheets):
@@ -409,7 +480,7 @@ def generate_metrics_st(month, blog_id, worksheets):
     worksheet_id = current_worksheet.get("id")
 
     # api_data
-    metrics_data = get_metrics_st(month, blog_id)
+    metrics_data = get_metrics_st(month, blog_id, current_worksheet)
 
     # Code Guard
     if not metrics_data:
@@ -604,6 +675,7 @@ def create_report(month, blog_id):
         generate_details_IG(month, blog_id, worksheets),
         generate_followers(month, blog_id, worksheets),
         generate_demographics(month, blog_id, worksheets),
+        generate_details_st(month, blog_id, worksheets),
         generate_metrics_st(month, blog_id, worksheets),
         generate_competitors(month, blog_id, worksheets),
     ]

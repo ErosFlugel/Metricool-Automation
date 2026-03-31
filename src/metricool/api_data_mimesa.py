@@ -357,7 +357,7 @@ def get_metrics_without_ads(posts_and_reels_base_data, reels_base_data, month, w
     return metrics_without_ads
 # -----------------------------------------------------
 # 
-def get_followers(month, blog_id):
+def get_followers(month, blog_id, worksheet):
     
     date_ranges = get_monthly_range_date(month.get("number"))
     
@@ -377,13 +377,16 @@ def get_followers(month, blog_id):
     try:
         
         total_followers = get_instagram(url, headers, params, "metric")
+
+        if len(total_followers.get("data")[0].get("values")) == 0:
+            raise ValueError("The API response does not contain the expected 'values' data for followers.")
         
         total_followers = total_followers.get("data")[0].get("values")[0].get("value")
 
         total_publications = stored_data.get("publications")
 
-        current_row = month.get("number") + 2
-        row_to_compare = spanish_months.index(spanish_months[month.get("number") - 2]) + 3
+        current_row = (month.get("number") - 1) + worksheet.get("tables_data")[0].get("row_starting_position")
+        row_to_compare = spanish_months.index(spanish_months[month.get("number") - 2]) + worksheet.get("tables_data")[0].get("row_starting_position")
 
         followers_data = [{"values": [
             {"userEnteredValue": {"stringValue": month.get("name")}},
@@ -402,8 +405,10 @@ def get_followers(month, blog_id):
         print(error)
 
 # -----------------------------------------------------
-# 
-def get_metrics_st(month, blog_id):
+# Get Basic data from posts and reels of instagram
+
+def get_detalles_st(month, blog_id):
+    
     date_ranges = get_monthly_range_date(month.get("number"))
 
     endpoint = "/v2/analytics/stories/instagram" #stories, reels or posts
@@ -421,16 +426,49 @@ def get_metrics_st(month, blog_id):
 
         instagram_stories = get_instagram(url, headers, params)
 
-        stories_data = list(map(lambda storie: {"reach": storie.get("reach"), "impressions": storie.get("impressions")}, instagram_stories.get("data")))
+        stories_data = list(map(lambda storie: {"reach": storie.get("reach") if isinstance(storie.get("reach"), int) else 0, "impressions": storie.get("impressions") if isinstance(storie.get("impressions"), int) else 0, "publishedAt": storie.get("publishedAt").get("dateTime")}, instagram_stories.get("data")))
 
-        all_impressions = reduce(lambda acc, storie: acc + storie.get("impressions"), stories_data, 0)
-        all_reach = reduce(lambda acc, storie: acc + storie.get("reach"), stories_data, 0)
+        # Ordering the stories by published date (newest to oldest)
+        stories_data.sort(key=lambda pub: pub.get("publishedAt"), reverse=False) #Reverse for the order
 
-        stories_data = [month.get("name"), all_impressions, "INSERT FÓRMULA", "", all_reach, "INSERT FÓRMULA", "", len(stories_data), "INSERT FÓRMULA"]
+        # Storing Persisting data
+        stored_data["stories"] = {
+            "total": len(stories_data),
+            "impressions": reduce(lambda acc, storie: acc + storie.get("impressions"), stories_data, 0),
+            "reach": reduce(lambda acc, storie: acc + storie.get("reach"), stories_data, 0)
+        }
+
+        stories_data = [{
+            "values": [
+                {"userEnteredValue": {"numberValue": index + 1}},
+                {"userEnteredValue": {"numberValue": storie.get("impressions") if isinstance(storie.get("impressions"), int) else 0}},
+                {"userEnteredValue": {"numberValue": storie.get("reach") if isinstance(storie.get("reach"), int) else 0}},
+            ]
+        } for index, storie in enumerate(stories_data)]
+
+        return stories_data
+    
+    except Exception as error:
+        print("===============================")
+        print("Something bad happend getting stories metrics data:")
+        print(error)
+
+# -----------------------------------------------------
+# 
+def get_metrics_st(month, blog_id, worksheet):
+
+    try: 
+
+        stories_data = stored_data.get("stories")
+
+        all_impressions = stories_data.get("impressions")
+        all_reach = stories_data.get("reach")
+
+        stories_data = [month.get("name"), all_impressions, "INSERT FÓRMULA", "", all_reach, "INSERT FÓRMULA", "", stories_data.get("total"), "INSERT FÓRMULA"]
 
         # Apply Fórmulas
-        current_row = month.get("number") + 3
-        row_to_compare = spanish_months.index(spanish_months[month.get("number") - 2]) + 4
+        current_row = (month.get("number") - 1) + worksheet.get("tables_data")[0].get("row_starting_position")
+        row_to_compare = spanish_months.index(spanish_months[month.get("number") - 2]) + worksheet.get("tables_data")[0].get("row_starting_position")
 
         stories_data[2] = get_formula("B", current_row, row_to_compare)
         stories_data[5] = get_formula("E", current_row, row_to_compare)
