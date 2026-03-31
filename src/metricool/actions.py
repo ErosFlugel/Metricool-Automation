@@ -17,10 +17,27 @@ def generate_details_IG(month, blog_id, worksheets):
     combo_details_ig_data = get_detalles_ig(month, blog_id, worksheets)
 
     # Code guard
-    if (not combo_details_ig_data) or (not combo_details_ig_data.get("detalles_ig")):
-        return
+    if (not combo_details_ig_data.get("success")) and (combo_details_ig_data.get("status") == "empty_metricool"):
 
-    details_ig_data = combo_details_ig_data.get("detalles_ig")
+        requests = [
+            {
+                "updateCells": {
+                    "rows": combo_details_ig_data.get("data").get("details_ig"),
+                    "fields": "userEnteredValue",
+                    "range": {
+                        "sheetId": worksheet_id,
+                        "startRowIndex": 0,
+                        "startColumnIndex": 0,
+                        "endColumnIndex": 1,
+                        "endRowIndex": 1,
+                    }
+                }
+            }
+        ]
+        return requests
+
+    if combo_details_ig_data.get("success") == True:
+        details_ig_data = combo_details_ig_data.get("data").get("details_ig")
 
     # table limits
     posts_and_reels_without_ads_starting_row = current_worksheet.get("tables_data")[0].get("row_starting_position")
@@ -44,6 +61,25 @@ def generate_details_IG(month, blog_id, worksheets):
                 },
                 "fields": "userEnteredValue"
             },
+        },
+        { #Cleaning Status
+            "updateCells": {
+                "rows": [
+                    {
+                        "values": [
+                            {"userEnteredValue": {"stringValue": ""}}
+                        ]
+                    }
+                ],
+                "fields": "userEnteredValue",
+                "range": {
+                    "sheetId": worksheet_id,
+                    "startRowIndex": 0,
+                    "startColumnIndex": 0,
+                    "endColumnIndex": 1,
+                    "endRowIndex": 1,
+                }
+            }
         },
         { #MONTH TITLE
             "updateCells": {
@@ -81,10 +117,10 @@ def generate_details_IG(month, blog_id, worksheets):
 
     #######################################################################################################
     # Interacciones without ads:
-    requests += generate_interactions_without_ads(combo_details_ig_data.get("interactions_without_ads"), month, worksheets)
+    requests += generate_interactions_without_ads(combo_details_ig_data.get("data").get("interactions_without_ads"), month, worksheets)
     #######################################################################################################
     # Metrics without ads:
-    requests += generate_metrics_without_ads(combo_details_ig_data.get("metrics_without_ads"), month, worksheets)
+    requests += generate_metrics_without_ads(combo_details_ig_data.get("data").get("metrics_without_ads"), month, worksheets)
 
     # Table Base
     current_worksheet = list(filter(lambda item: item.get("title") == "Interacciones SIN ADS", worksheets))[0]
@@ -101,8 +137,27 @@ def generate_followers(month, blog_id, worksheets):
     followers_data = get_followers(month, blog_id, current_worksheet)
 
     # Code guard
-    if not followers_data:
-        return
+    if (not followers_data.get("success")) and (followers_data.get("status") == "empty_metricool"):
+
+        requests = [
+            {
+                "updateCells": {
+                    "rows": followers_data.get("data"),
+                    "fields": "userEnteredValue",
+                    "range": {
+                        "sheetId": worksheet_id,
+                        "startRowIndex": 0,
+                        "startColumnIndex": 0,
+                        "endColumnIndex": 1,
+                        "endRowIndex": 1,
+                    }
+                }
+            }
+        ]
+        return requests
+    
+    if followers_data.get("success") == True:
+        followers_data = followers_data.get("data")
 
     # table limits
     current_monthly_position = (current_worksheet.get("tables_data")[0].get("row_starting_position") - 1) +  (month.get("number") - 1)
@@ -112,6 +167,20 @@ def generate_followers(month, blog_id, worksheets):
     
     # Main Table
     requests = [
+        # Cleaning status error cell
+        {
+            "updateCells": {
+                "rows": [{"values": [{"userEnteredValue": {"stringValue": ""}}]}],
+                "fields": "userEnteredValue",
+                "range": {
+                    "sheetId": worksheet_id,
+                    "startRowIndex": 0,
+                    "startColumnIndex": 0,
+                    "endColumnIndex": 1,
+                    "endRowIndex": 1,
+                }
+            }
+        },
         {
             "updateCells": {
                 "rows": followers_data,
@@ -181,9 +250,33 @@ def generate_demographics(month, blog_id, worksheets):
     age_data = get_age(month, blog_id)
 
     # Code guard
-    if not (gender_data and age_data):
-        return
+    if (not gender_data.get("success")) or (not age_data.get("success")):
+        
+        feedback_message = gender_data.get("data") if not gender_data.get("success") else age_data.get("data")
+
+        requests = [
+            {
+                "updateCells": {
+                    "rows": feedback_message,
+                    "fields": "userEnteredValue",
+                    "range": {
+                        "sheetId": worksheet_id,
+                        "startRowIndex": 0,
+                        "startColumnIndex": 0,
+                        "endColumnIndex": 1,
+                        "endRowIndex": 1,
+                    }
+                }
+            }
+        ]
+        return requests
     
+    if gender_data.get("success") == True:
+        gender_data = gender_data.get("data")
+
+    if age_data.get("success") == True:
+        age_data = age_data.get("data")
+
     # gender table limits
     gender_index_starting_row = current_worksheet.get("tables_data")[1].get("row_starting_position") - 1
     gender_starting_column_index = current_worksheet.get("tables_data")[1].get("column_starting_position") - 1
@@ -197,6 +290,20 @@ def generate_demographics(month, blog_id, worksheets):
     age_data_row_amount = len(age_data)
 
     requests = [
+        # Cleaning status error cell
+        {
+            "updateCells": {
+                "rows": [{"values": [{"userEnteredValue": {"stringValue": ""}}]}],
+                "fields": "userEnteredValue",
+                "range": {
+                    "sheetId": worksheet_id,
+                    "startRowIndex": 0,
+                    "startColumnIndex": 0,
+                    "endColumnIndex": 1,
+                    "endRowIndex": 1,
+                }
+            }
+        },
         # Writes the month name
         {
             "updateCells": {
@@ -409,10 +516,29 @@ def generate_details_st(month, blog_id, worksheets):
 
     # api_data
     stories_details_data = get_detalles_st(month, blog_id)
+    
+    # Code guard
+    if (not stories_details_data.get("success")) and (stories_details_data.get("status") == "empty_metricool"):
 
-    # Code Guard
-    if not stories_details_data:
-        return 
+        requests = [
+            {
+                "updateCells": {
+                    "rows": stories_details_data.get("data"),
+                    "fields": "userEnteredValue",
+                    "range": {
+                        "sheetId": worksheet_id,
+                        "startRowIndex": 0,
+                        "startColumnIndex": 0,
+                        "endColumnIndex": 1,
+                        "endRowIndex": 1,
+                    }
+                }
+            }
+        ]
+        return requests
+    
+    if stories_details_data.get("success") == True:
+        stories_details_data = stories_details_data.get("data")
     
     # table limits
     row_starting_position_index = current_worksheet.get("tables_data")[0].get("row_starting_position") - 1
@@ -436,6 +562,25 @@ def generate_details_st(month, blog_id, worksheets):
                 },
                 "fields": "userEnteredValue"
             },
+        },
+        { #CLEANING status error cell
+            "updateCells": {
+                "rows": [
+                    {
+                        "values": [
+                            {"userEnteredValue": {"stringValue": ""}}
+                        ]
+                    }
+                ],
+                "fields": "userEnteredValue",
+                "range": {
+                    "sheetId": worksheet_id,
+                    "startRowIndex": 0,
+                    "startColumnIndex": 0,
+                    "endColumnIndex": 1,
+                    "endRowIndex": 1,
+                }
+            }
         },
         { #MONTH TITLE
             "updateCells": {
@@ -471,16 +616,20 @@ def generate_details_st(month, blog_id, worksheets):
         }
     ]
 
+    #######################################################################################################
+    # Metrics ST:
+    requests += generate_metrics_st(month, worksheets)
+
     return requests
     
 
-def generate_metrics_st(month, blog_id, worksheets):
+def generate_metrics_st(month, worksheets):
     # Table Base
     current_worksheet = list(filter(lambda item: item.get("title") == "Métricas ST", worksheets))[0]
     worksheet_id = current_worksheet.get("id")
 
     # api_data
-    metrics_data = get_metrics_st(month, blog_id, current_worksheet)
+    metrics_data = get_metrics_st(month, current_worksheet)
 
     # Code Guard
     if not metrics_data:
@@ -560,14 +709,49 @@ def generate_competitors(month, blog_id, worksheets):
     # api_data
     data = get_competitors(month, blog_id, current_worksheet)
 
-    # Code Guard
-    if not data:
-        return 
+    # Code guard
+    if (not data.get("success")) and (data.get("status") == "empty_metricool"):
+
+        requests = [
+            {
+                "updateCells": {
+                    "rows": data.get("data"),
+                    "fields": "userEnteredValue",
+                    "range": {
+                        "sheetId": worksheet_id,
+                        "startRowIndex": 0,
+                        "startColumnIndex": 0,
+                        "endColumnIndex": 1,
+                        "endRowIndex": 1,
+                    }
+                }
+            }
+        ]
+        return requests
+    
+    
+    if data.get("success"):
+        data = data.get("data")
     
     # Main table limits
     competitors_tables_data = current_worksheet.get("tables_data")
 
-    requests = []
+    requests = [
+        # CLEANING status error cell
+        {
+            "updateCells": {
+                "rows": [{"values": [{"userEnteredValue": {"stringValue": ""}}]}],
+                "fields": "userEnteredValue",
+                "range": {
+                    "sheetId": worksheet_id,
+                    "startRowIndex": 0,
+                    "startColumnIndex": 0,
+                    "endColumnIndex": 1,
+                    "endRowIndex": 1,
+                }
+            }
+        }
+    ]
 
     for i, row in enumerate(competitors_tables_data): 
 
@@ -676,7 +860,6 @@ def create_report(month, blog_id):
         generate_followers(month, blog_id, worksheets),
         generate_demographics(month, blog_id, worksheets),
         generate_details_st(month, blog_id, worksheets),
-        generate_metrics_st(month, blog_id, worksheets),
         generate_competitors(month, blog_id, worksheets),
     ]
 

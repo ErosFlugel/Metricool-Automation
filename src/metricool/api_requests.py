@@ -54,6 +54,8 @@ def get_instagram(url, headers, params, query=None):
         print("---------------------------------------\n")
         print("Please check your credentials and ensure the blogId is for an Instagram profile.")
 
+        return { "data": []}
+
     except requests.exceptions.RequestException as e:
         print(f"\n--- API Request Failed (Connection Error) ---")
         print(f"An error occurred during the request: {e}")

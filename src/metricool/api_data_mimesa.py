@@ -2,6 +2,7 @@ import os
 from dotenv import load_dotenv
 from datetime import datetime
 from functools import reduce
+import json
 
 from src.metricool.api_requests import get_instagram
 from src.sheet.sheet_data import spanish_months
@@ -67,6 +68,11 @@ def get_gender(month, blog_id):
 
         demographic_gender = get_instagram(url, headers, params)
 
+        # Code Guard: If there is no data for the requested month, we return a response with an specific status to handle it in the UI and avoid errors with empty data
+        if len(demographic_gender.get("data")) == 0:
+            response = [{"values": [{"userEnteredValue": {"stringValue": f"Metricool no tiene datos para el mes de {month.get('name')}"}}]}]
+            return {"success": False, "status": "empty_metricool", "data": response}
+
         demographic_gender = [{item["key"]: item["value"]} for item in demographic_gender["data"]]
 
         key_changes = {
@@ -82,7 +88,7 @@ def get_gender(month, blog_id):
             {"userEnteredValue": {"numberValue": list(gend.values())[0]}}
         ]}, demographic_gender))
         
-        return demographic_gender
+        return {"success": True, "status": "ok", "data": demographic_gender}
     
     except Exception as error:
         print("===============================")
@@ -113,6 +119,11 @@ def get_age(month, blog_id):
 
         demographic_age = get_instagram(url, headers, params)
 
+        # Code Guard: If there is no data for the requested month, we return a response with an specific status to handle it in the UI and avoid errors with empty data
+        if len(demographic_age.get("data")) == 0:
+            response = [{"values": [{"userEnteredValue": {"stringValue": f"Metricool no tiene datos para el mes de {month.get('name')}"}}]}]
+            return {"success": False, "status": "empty_metricool", "data": response}
+
         demographic_age = [{item["key"]: item["value"]} for item in demographic_age["data"]]
 
         demographic_age = sorted(demographic_age, key=lambda d: int(list(d.keys())[0].split('-')[0].split('+')[0]))
@@ -122,7 +133,7 @@ def get_age(month, blog_id):
             {"userEnteredValue": {"numberValue": list(age.values())[0]}}
         ]}, demographic_age))
 
-        return demographic_age
+        return {"success": True, "status": "ok", "data": demographic_age}
     
     except Exception as error:
         print("===============================")
@@ -159,45 +170,47 @@ def get_detalles_ig(month, blog_id, worksheets):
         detalles_ig_data = []
 
         # cleaning the data to be used
-        for post in instagram_posts.get("data"):
-            detalles_ig_data.append({
-                "meta":{
-                    "type": "post",
-                    "publishedAt": datetime.fromisoformat(post.get("publishedAt").get("dateTime")),
-                },
+        if len(instagram_posts.get("data")) > 0:
+            for post in instagram_posts.get("data"):
+                detalles_ig_data.append({
+                    "meta":{
+                        "type": "post",
+                        "publishedAt": datetime.fromisoformat(post.get("publishedAt").get("dateTime")),
+                    },
 
-                "data": [
-                    {"type": "numberValue", "content": post.get("likes")}, #ME GUSTAS
-                    {"type": "numberValue", "content": post.get("comments")}, #COMENTARIOS
-                    {"type": "numberValue", "content": post.get("shares")}, #COMPARTIDOS
-                    {"type": "numberValue", "content": post.get("saved")}, #GUARDADOS
-                    {"type": "stringValue", "content": post.get("")}, #REPOSTEOS
-                    {"type": "numberValue", "content": post.get("reach")}, #ALCANCE POSTS
-                    {"type": "stringValue", "content": ""}, #ALCANCE REELS
-                    {"type": "numberValue", "content": post.get("views")}, #VISUALIZACIONES POSTS
-                    {"type": "stringValue", "content": ""}, #VISUALIZACIONES REELS
-                    {"type": "formulaValue", "content": "INSERT FÓRMULA"}, #VISUALIZACIONES TOTALES
-                    {"type": "stringValue", "content": ""}, #VISTAS AL PERFIL
-                    {"type": "formulaValue", "content": "INSERT FÓRMULA"}, #INTERACCIONES
-                    {"type": "formulaValue", "content": "INSERT FÓRMULA"}, #ALCANCE TOTAL
-                    {"type": "numberValue", "content": post.get("engagement")}, #ENGAGEMENT
-                ]
+                    "data": [
+                        {"type": "numberValue", "content": post.get("likes")}, #ME GUSTAS
+                        {"type": "numberValue", "content": post.get("comments")}, #COMENTARIOS
+                        {"type": "numberValue", "content": post.get("shares")}, #COMPARTIDOS
+                        {"type": "numberValue", "content": post.get("saved")}, #GUARDADOS
+                        {"type": "stringValue", "content": ""}, #REPOSTEOS
+                        {"type": "numberValue", "content": post.get("reach")}, #ALCANCE POSTS
+                        {"type": "stringValue", "content": ""}, #ALCANCE REELS
+                        {"type": "numberValue", "content": post.get("views")}, #VISUALIZACIONES POSTS
+                        {"type": "stringValue", "content": ""}, #VISUALIZACIONES REELS
+                        {"type": "formulaValue", "content": "INSERT FÓRMULA"}, #VISUALIZACIONES TOTALES
+                        {"type": "stringValue", "content": ""}, #VISTAS AL PERFIL
+                        {"type": "formulaValue", "content": "INSERT FÓRMULA"}, #INTERACCIONES
+                        {"type": "formulaValue", "content": "INSERT FÓRMULA"}, #ALCANCE TOTAL
+                        {"type": "numberValue", "content": post.get("engagement") if post.get("engagement") else 0}, #ENGAGEMENT
+                    ]
 
-            })
+                })
 
-        for reel in instagram_reels.get("data"):
-            detalles_ig_data.append({
-                "meta":{
-                    "type": "reel",
-                    "publishedAt": datetime.fromisoformat(reel.get("publishedAt").get("dateTime")),
-                },
+        if len(instagram_reels.get("data")) > 0:
+            for reel in instagram_reels.get("data"):
+                detalles_ig_data.append({
+                    "meta":{
+                        "type": "reel",
+                        "publishedAt": datetime.fromisoformat(reel.get("publishedAt").get("dateTime")),
+                    },
                 "data":[
 
                     {"type": "numberValue", "content": reel.get("likes")}, #ME GUSTAS
                     {"type": "numberValue", "content": reel.get("comments")}, #COMENTARIOS
                     {"type": "numberValue", "content": reel.get("shares")}, #COMPARTIDOS
                     {"type": "numberValue", "content": reel.get("saved")}, #GUARDADOS
-                    {"type": "numberValue", "content": reel.get("reposts")}, #REPOSTEOS
+                    {"type": "numberValue", "content": reel.get("reposts") if reel.get("reposts") else 0}, #REPOSTEOS
                     {"type": "stringValue", "content": ""}, #ALCANCE POSTS
                     {"type": "numberValue", "content": reel.get("reach")}, #ALCANCE REELS
                     {"type": "stringValue", "content": ""}, #VISUALIZACIONES POSTS
@@ -206,10 +219,19 @@ def get_detalles_ig(month, blog_id, worksheets):
                     {"type": "stringValue", "content": ""}, #VISTAS AL PERFIL
                     {"type": "formulaValue", "content": "INSERT FÓRMULA"}, #INTERACCIONES
                     {"type": "formulaValue", "content": "INSERT FÓRMULA"}, #ALCANCE TOTAL
-                    {"type": "numberValue", "content": reel.get("engagement")}, #ENGAGEMENT
+                    {"type": "numberValue", "content": reel.get("engagement") if reel.get("engagement") else 0}, #ENGAGEMENT
                 ]
 
             })
+            
+            # Code Guard: If there are no posts or reels, we return a response with an specific status to handle it in the UI and avoid errors with empty data
+            if len(detalles_ig_data) == 0:
+                response = [{"values": [{"userEnteredValue": {"stringValue": f"Metricool no tiene datos para el mes de {month.get('name')}"}}]}]
+                return {"success": False, "status": "empty_metricool", "data": {
+                "details_ig": response,
+                "interactions_without_ads": response,
+                "metrics_without_ads": response
+            }}
 
         # Ordering the publications by published date (newest to oldest)
         detalles_ig_data.sort(key=lambda pub: pub.get("meta").get("publishedAt"), reverse=False) #Reverse for the order
@@ -247,13 +269,17 @@ def get_detalles_ig(month, blog_id, worksheets):
         # Metrics without ads:
         metrics_without_ads = get_metrics_without_ads(stored_data, detalles_ig_data, month, worksheets)
 
-        all_data = {
-            "detalles_ig": detalles_ig_data_rows,
-            "interactions_without_ads": interactions_without_ads,
-            "metrics_without_ads": metrics_without_ads
+        response = {
+            "success": True,
+            "status": "ok",
+            "data": {
+                "details_ig": detalles_ig_data_rows,
+                "interactions_without_ads": interactions_without_ads,
+                "metrics_without_ads": metrics_without_ads
+            }
         }
 
-        return all_data
+        return response
     
     except Exception as error:
         print("===============================")
@@ -379,7 +405,8 @@ def get_followers(month, blog_id, worksheet):
         total_followers = get_instagram(url, headers, params, "metric")
 
         if len(total_followers.get("data")[0].get("values")) == 0:
-            raise ValueError("The API response does not contain the expected 'values' data for followers.")
+            response = [{"values": [{"userEnteredValue": {"stringValue": f"Metricool no tiene datos para el mes de {month.get('name')}"}}]}]
+            return {"success": False, "status": "empty_metricool", "data": response}
         
         total_followers = total_followers.get("data")[0].get("values")[0].get("value")
 
@@ -397,7 +424,7 @@ def get_followers(month, blog_id, worksheet):
             {"userEnteredValue": {"numberValue": total_publications}},
         ]}]
 
-        return followers_data
+        return {"success": True, "status": "ok", "data": followers_data}
 
     except Exception as error:
         print("===============================")
@@ -426,6 +453,11 @@ def get_detalles_st(month, blog_id):
 
         instagram_stories = get_instagram(url, headers, params)
 
+        # Code Guard: If there is no data for the requested month, we return a response with an specific status to handle it in the UI and avoid errors with empty data
+        if len(instagram_stories.get("data")) == 0:
+            response = [{"values": [{"userEnteredValue": {"stringValue": f"Metricool no tiene datos para el mes de {month.get('name')}"}}]}]
+            return {"success": False, "status": "empty_metricool", "data": response}
+
         stories_data = list(map(lambda storie: {"reach": storie.get("reach") if isinstance(storie.get("reach"), int) else 0, "impressions": storie.get("impressions") if isinstance(storie.get("impressions"), int) else 0, "publishedAt": storie.get("publishedAt").get("dateTime")}, instagram_stories.get("data")))
 
         # Ordering the stories by published date (newest to oldest)
@@ -446,16 +478,16 @@ def get_detalles_st(month, blog_id):
             ]
         } for index, storie in enumerate(stories_data)]
 
-        return stories_data
+        return {"success": True, "status": "ok", "data": stories_data}
     
     except Exception as error:
         print("===============================")
-        print("Something bad happend getting stories metrics data:")
+        print("Something bad happend getting stories details data:")
         print(error)
 
 # -----------------------------------------------------
 # 
-def get_metrics_st(month, blog_id, worksheet):
+def get_metrics_st(month, worksheet):
 
     try: 
 
@@ -514,6 +546,11 @@ def get_competitors(month, blog_id, current_worksheet):
         
         instagram_competitors = get_instagram(url, headers, params)
 
+        # Code Guard: If there is no data for the requested month, we return a response with an specific status to handle it in the UI and avoid errors with empty data
+        if len(instagram_competitors.get("data")) == 0:
+            response = [{"values": [{"userEnteredValue": {"stringValue": f"Metricool no tiene datos para el mes de {month.get('name')}"}}]}]
+            return {"success": False, "status": "empty_metricool", "data": response}
+
         # getting the data from sheet_data.py
         competitors_order = list(map(lambda comp: comp.get("providerId"), current_worksheet.get("data")))
 
@@ -568,7 +605,7 @@ def get_competitors(month, blog_id, current_worksheet):
                 table[0].get("values").append({"userEnteredValue": {"formulaValue": formula}}) 
             
         
-        return competitors_tables_data
+        return {"success": True, "status": "ok", "data": competitors_tables_data}
     
     except Exception as error:
         print("===============================")
