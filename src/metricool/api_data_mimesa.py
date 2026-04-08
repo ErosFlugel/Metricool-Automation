@@ -346,6 +346,8 @@ def get_metrics_without_ads(posts_and_reels_base_data, reels_base_data, month, w
         # empty space intersection column
         if i < (len(columns_data) - 1):
             posts_and_reels_without_ads.append({"userEnteredValue": {"stringValue": ""}})
+            
+    posts_and_reels_without_ads[10] = {"userEnteredValue": {"formulaValue": f"=IFERROR(E{current_month_row}/Seguidores!B{current_month_row}*100, \"\")"}} # 10 for the ENGAGEMENT column, different formula
 
     posts_and_reels_without_ads = [{"values": posts_and_reels_without_ads}]
 
@@ -381,6 +383,26 @@ def get_metrics_without_ads(posts_and_reels_base_data, reels_base_data, month, w
     ]
 
     return metrics_without_ads
+# -----------------------------------------------------
+# 
+
+def get_totals(columns_data, follower_monthly_position):
+    
+    try: 
+
+        totals_data = [{"values": [
+            {"userEnteredValue": {"formulaValue": column.get("formula_content")}} for column in columns_data
+        ]}]
+
+        totals_data[0].get("values")[13] = {"userEnteredValue": {"formulaValue": f"=L3/Seguidores!B{follower_monthly_position}*100"}} # 13 for the ENGAGEMENT column
+
+        return {"success": True, "status": "ok", "data": totals_data}
+
+    except Exception as error:
+        print("===============================")
+        print("Something bad happend getting totals data:")
+        print(error)
+
 # -----------------------------------------------------
 # 
 def get_followers(month, blog_id, worksheet):

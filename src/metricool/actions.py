@@ -2,7 +2,7 @@
 
 from src.sheet.api_connection import connected_sheet
 from src.sheet.sheet_data import profile_specs, spanish_months
-from src.metricool.api_data_mimesa import get_gender, get_age, get_detalles_ig, get_followers, get_metrics_st, get_competitors, get_detalles_st
+from src.metricool.api_data_mimesa import get_gender, get_age, get_detalles_ig, get_followers, get_metrics_st, get_competitors, get_detalles_st, get_totals
 
 from src.utils.data_handlers import get_base_graphic_compare_table
 
@@ -122,10 +122,40 @@ def generate_details_IG(month, blog_id, worksheets):
     # Metrics without ads:
     requests += generate_metrics_without_ads(combo_details_ig_data.get("data").get("metrics_without_ads"), month, worksheets)
 
+    # # Table Base
+    # current_worksheet = list(filter(lambda item: item.get("title") == "Interacciones SIN ADS", worksheets))[0]
+    # worksheet_id = current_worksheet.get("id")
+
+    return requests
+
+def generate_totals(follower_monthly_position, worksheets):
     # Table Base
-    current_worksheet = list(filter(lambda item: item.get("title") == "Interacciones SIN ADS", worksheets))[0]
+    current_worksheet = list(filter(lambda item: item.get("title") == "Totales", worksheets))[0]
     worksheet_id = current_worksheet.get("id")
 
+    # api_data
+    columns_data = current_worksheet.get("tables_data")[0].get("columns_data")
+    totals_data = get_totals(columns_data, follower_monthly_position)
+
+    starting_column_index = current_worksheet.get("tables_data")[0].get("column_starting_position") - 1
+    starting_row_index = current_worksheet.get("tables_data")[0].get("row_starting_position") - 1
+    end_column_index = starting_column_index + len(columns_data)
+
+    requests = [
+        {
+            "updateCells": {
+                "rows": totals_data.get("data"),
+                "fields": "userEnteredValue",
+                "range": {
+                    "sheetId": worksheet_id,
+                    "startRowIndex": starting_row_index,
+                    "startColumnIndex": starting_column_index,
+                    "endColumnIndex": end_column_index,
+                    "endRowIndex": starting_row_index + 1,
+                }
+            }
+        }
+    ]
     return requests
 
 def generate_followers(month, blog_id, worksheets):
@@ -160,7 +190,7 @@ def generate_followers(month, blog_id, worksheets):
         followers_data = followers_data.get("data")
 
     # table limits
-    current_monthly_position = (current_worksheet.get("tables_data")[0].get("row_starting_position") - 1) +  (month.get("number") - 1)
+    current_monthly_position = (current_worksheet.get("tables_data")[0].get("row_starting_position") - 1) + (month.get("number") - 1)
     starting_column_index = current_worksheet.get("tables_data")[0].get("column_starting_position") - 1
     data_column_amount = len(followers_data[0].get("values"))
     data_row_amount = len(followers_data)
@@ -236,6 +266,10 @@ def generate_followers(month, blog_id, worksheets):
             }
         }
     })
+
+    #######################################################################################################
+    # Totals:
+    requests.append(generate_totals(current_monthly_position + 1, worksheets))
 
     return requests
 
