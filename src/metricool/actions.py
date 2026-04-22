@@ -128,7 +128,7 @@ def generate_details_IG(month, blog_id, worksheets):
 
     return requests
 
-def generate_totals(follower_monthly_position, worksheets):
+def generate_totals(month, follower_monthly_position, worksheets):
     # Table Base
     current_worksheet = list(filter(lambda item: item.get("title") == "Totales", worksheets))[0]
     worksheet_id = current_worksheet.get("id")
@@ -152,6 +152,19 @@ def generate_totals(follower_monthly_position, worksheets):
                     "startColumnIndex": starting_column_index,
                     "endColumnIndex": end_column_index,
                     "endRowIndex": starting_row_index + 1,
+                }
+            }
+        },
+        {
+            "updateCells": {
+                "rows": [{"values": [{"userEnteredValue": {"stringValue": month.get("name")}}]}],
+                "fields": "userEnteredValue",
+                "range": {
+                    "sheetId": worksheet_id,
+                    "startRowIndex": 19,
+                    "startColumnIndex": 0,
+                    "endColumnIndex": 1,
+                    "endRowIndex": 20,
                 }
             }
         }
@@ -269,7 +282,7 @@ def generate_followers(month, blog_id, worksheets):
 
     #######################################################################################################
     # Totals:
-    requests.append(generate_totals(current_monthly_position + 1, worksheets))
+    requests.append(generate_totals(month, current_monthly_position + 1, worksheets))
 
     return requests
 
