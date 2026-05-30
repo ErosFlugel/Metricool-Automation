@@ -210,6 +210,7 @@ __marimo__/
 # google-sheets
 credentials.json
 sheet_data.py
+src/sheet/csv_exports/
 
 # executables
 MetriAutomation_WINDOWS_setup.exe

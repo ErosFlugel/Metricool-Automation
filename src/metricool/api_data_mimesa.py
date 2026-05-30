@@ -267,7 +267,7 @@ def get_detalles_ig(month, blog_id, worksheets):
         interactions_without_ads = get_interactions_without_ads(detalles_ig_data, month, worksheets)
         #######################################################################################################
         # Metrics without ads:
-        metrics_without_ads = get_metrics_without_ads(stored_data, detalles_ig_data, month, worksheets)
+        metrics_without_ads = get_metrics_without_ads(detalles_ig_data, month, worksheets)
 
         response = {
             "success": True,
@@ -319,7 +319,19 @@ def get_interactions_without_ads(base_data, month, worksheets):
     return interactions_without_ads
 # -----------------------------------------------------
 # 
-def get_metrics_without_ads(posts_and_reels_base_data, reels_base_data, month, worksheets):
+def get_metrics_without_ads(reels_base_data, month, worksheets):
+
+    posts_base_data = list(filter(lambda item: item.get("meta").get("type") == "post", reels_base_data))
+
+    posts_base_data = {
+        "publications": len(posts_base_data),
+        "total_views": reduce(lambda acc, row: acc + row.get("data")[7].get("content"), posts_base_data, 0),
+        "interactions": reduce(lambda acc, row: acc + row.get("data")[0].get("content") + row.get("data")[1].get("content") + row.get("data")[2].get("content") + row.get("data")[3].get("content") + (row.get("data")[4].get("content") if isinstance(row.get("data")[4].get("content"), int) else 0), posts_base_data, 0),
+        "profile_views": reduce(lambda acc, row: acc + row.get("data")[10].get("content") if isinstance(row.get("data")[10].get("content"), int) else 0, posts_base_data, 0),
+        "engagement": reduce(lambda acc, row: acc + (row.get("data")[13].get("content") if isinstance(row.get("data")[13].get("content"), float) else 0), posts_base_data, 0) / len(posts_base_data) if len(posts_base_data) > 0 else 0
+    }
+
+
     # Table Base
     current_worksheet = list(filter(lambda item: item.get("title") == "Métricas SIN ADS", worksheets))[0]
 
@@ -338,7 +350,7 @@ def get_metrics_without_ads(posts_and_reels_base_data, reels_base_data, month, w
     for i, column in enumerate(columns_data):
         # main column data
         posts_and_reels_without_ads.append(
-            {"userEnteredValue": {"numberValue": posts_and_reels_base_data.get(column.get("stored_data_key"))}}
+            {"userEnteredValue": {"numberValue": posts_base_data.get(column.get("stored_data_key"))}}
         )
         # formula column
         posts_and_reels_without_ads.append({"userEnteredValue": {"formulaValue": get_formula(column.get("formula_letter"), current_month_row, row_to_compare)}})

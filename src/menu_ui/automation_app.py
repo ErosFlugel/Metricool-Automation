@@ -7,6 +7,7 @@ import threading
 import traceback
 
 from src.sheet.sheet_data import profile_specs, spanish_months
+from src.sheet.api_connection import export_to_csv, send_csv_by_email
 from src.utils.config_handlers import  get_application_path
 
 # Load environment variables from .env file
@@ -40,6 +41,10 @@ class AutomationApp:
         self.current_platform = "Instagram"
         self.pages = {}
         self.platform_widgets = {}
+        self.is_exporting = False
+        
+        # Export mode: "email" (Send by email) or "local" (Save locally)
+        self.export_mode = "email"
 
         # actions
         self.actions = actions
@@ -77,6 +82,27 @@ class AutomationApp:
                                         cursor='hand2')
         self.settings_btn.pack(side='right', padx=20)
         self.settings_btn.bind("<Button-1>", self.show_platform_menu)
+        
+        # Hover effect for Settings Icon
+        self.settings_btn.bind("<Enter>", lambda e: self.settings_btn.config(bg='#2980b9'))
+        self.settings_btn.bind("<Leave>", lambda e: self.settings_btn.config(bg='#3498db'))
+
+        # Export CSV Button (placed to the left of the settings icon)
+        button_text = "📧 Enviar por Email" if self.export_mode == "email" else "📥 Exportar CSV"
+        self.export_btn = tk.Label(header,
+                                   text=button_text,
+                                   font=('Segoe UI', 12, 'bold'),
+                                   bg=self.button_green,
+                                   fg=self.white,
+                                   padx=15,
+                                   pady=5,
+                                   cursor='hand2')
+        self.export_btn.pack(side='right', padx=(0, 10))
+        self.export_btn.bind("<Button-1>", lambda e: self.start_export_thread())
+        
+        # Hover effects for Export CSV Button
+        self.export_btn.bind("<Enter>", lambda e: self.export_btn.config(bg='#27ae60') if not self.is_exporting else None)
+        self.export_btn.bind("<Leave>", lambda e: self.export_btn.config(bg=self.button_green) if not self.is_exporting else None)
         
         # --- Main Content Container ---
         self.main_container = tk.Frame(self.root, bg=self.white)
@@ -278,3 +304,170 @@ class AutomationApp:
         
         # Reset status to default after 5 seconds
         self.root.after(5000, lambda: self.update_status(f"Viendo: Automatización {self.current_platform}"))
+
+    def start_export_thread(self):
+        """Start the CSV export process in a separate background thread"""
+        if self.is_exporting:
+            return
+            
+        company_val = self.platform_widgets[self.current_platform]['company_var'].get()
+        
+        # Open the selection modal dialog
+        dialog = ExportOptionDialog(self.root, company_val, self.export_mode)
+        selection = dialog.result
+        
+        if selection is None:
+            return # Cancelled
+            
+        self.is_exporting = True
+        self.export_btn.config(state="disabled", bg='#95a5a6')  # Disabled gray color
+        
+        if selection == "all":
+            # Export all active brands (excluding TESTING-SHEET-TOYOTA)
+            brands = [comp.get("name") for comp in profile_specs if comp.get("name") != "TESTING-SHEET-TOYOTA"]
+            action_verb = "Enviando" if self.export_mode == "email" else "Exportando"
+            self.update_status(f"{action_verb} todas las marcas (6)... Por favor espere", self.text_dark)
+        else:
+            # Export only current brand
+            brands = [company_val]
+            action_verb = "Enviando" if self.export_mode == "email" else "Exportando"
+            action_noun = "por email" if self.export_mode == "email" else "a CSV"
+            self.update_status(f"{action_verb} CSV de {company_val} {action_noun}... Por favor espere", self.text_dark)
+        
+        self.progress.pack(side="left", padx=10)
+        self.progress.start(10)
+        
+        thread = threading.Thread(target=self.export_csv_data, args=(brands, selection == "all"))
+        thread.daemon = True
+        thread.start()
+
+    def export_csv_data(self, brands, is_all_mode):
+        """Perform the CSV export in the background"""
+        try:
+            filepaths = []
+            
+            # Export each selected brand
+            for brand in brands:
+                sheet_id = [comp.get("id") for comp in profile_specs if comp.get("name") == brand][0]
+                filepath = export_to_csv(brand, sheet_id)
+                filepaths.append(filepath)
+            
+            if self.export_mode == "email":
+                # Send the generated CSV by email
+                recipient = os.getenv("EMAIL_RECIPIENT")
+                send_csv_by_email(brands, filepaths, recipient)
+                if is_all_mode:
+                    msg = f"✓ Reportes de todas las marcas enviados a {recipient} exitosamente"
+                else:
+                    msg = f"✓ CSV de {brands[0]} enviado a {recipient} exitosamente"
+            else:
+                if is_all_mode:
+                    msg = f"✓ Reportes de todas las marcas ({len(brands)}) exportados exitosamente"
+                else:
+                    msg = f"✓ CSV de {brands[0]} exportado exitosamente"
+            
+            # On success
+            self.root.after(0, lambda: self.on_export_complete(True, msg))
+            
+        except Exception as e:
+            # On error
+            action_name = "enviar" if self.export_mode == "email" else "exportar"
+            error_msg = f"✗ Error al {action_name} CSV: {str(e)}"
+            self.root.after(0, lambda: self.on_export_complete(False, error_msg))
+            traceback.print_exc()
+
+    def on_export_complete(self, success, message):
+        """Clean up UI after CSV export finishes"""
+        self.progress.stop()
+        self.progress.pack_forget()
+        
+        self.is_exporting = False
+        self.export_btn.config(state="normal", bg=self.button_green)
+        
+        color = self.success_green if success else self.error_red
+        self.update_status(message, color)
+        
+        # Reset status to default after 5 seconds
+        self.root.after(5000, lambda: self.update_status(f"Viendo: Automatización {self.current_platform}"))
+
+
+class ExportOptionDialog(tk.Toplevel):
+    def __init__(self, parent, current_brand, export_mode):
+        super().__init__(parent)
+        self.title("Opción de Exportación")
+        self.geometry("450x220")
+        self.configure(bg='#f0f2f5')
+        self.resizable(False, False)
+        
+        # Center in parent
+        self.transient(parent)
+        self.grab_set()
+        
+        # Style tokens
+        bg_color = '#f0f2f5'
+        card_bg = '#ffffff'
+        text_color = '#2c3e50'
+        btn_blue = '#3498db'
+        btn_green = '#2ecc71'
+        btn_gray = '#95a5a6'
+        
+        # Main container card
+        card = tk.Frame(self, bg=card_bg, padx=20, pady=20)
+        card.pack(fill='both', expand=True, padx=15, pady=15)
+        
+        action_verb = "enviar por email" if export_mode == "email" else "exportar a CSV"
+        label_text = f"¿Qué deseas {action_verb}?"
+        
+        title_label = tk.Label(card, text=label_text, font=('Segoe UI', 14, 'bold'), fg=text_color, bg=card_bg)
+        title_label.pack(pady=(0, 15))
+        
+        self.result = None # Stores "current", "all", or None
+        
+        # Button frame
+        btn_frame = tk.Frame(card, bg=card_bg)
+        btn_frame.pack(fill='x', pady=10)
+        
+        # Button 1: Current brand
+        btn1_text = f"Solo {current_brand}"
+        btn1 = tk.Button(btn_frame, text=btn1_text, font=('Segoe UI', 11, 'bold'), bg=btn_blue, fg='white',
+                         activebackground='#2980b9', activeforeground='white', relief='flat', padx=10, pady=8,
+                         cursor='hand2', command=self.on_current)
+        btn1.pack(side='left', expand=True, fill='x', padx=5)
+        
+        # Button 2: All brands
+        btn2_text = "Todas las Marcas (6)"
+        btn2 = tk.Button(btn_frame, text=btn2_text, font=('Segoe UI', 11, 'bold'), bg=btn_green, fg='white',
+                         activebackground='#27ae60', activeforeground='white', relief='flat', padx=10, pady=8,
+                         cursor='hand2', command=self.on_all)
+        btn2.pack(side='left', expand=True, fill='x', padx=5)
+        
+        # Button 3: Cancel
+        btn3 = tk.Button(btn_frame, text="Cancelar", font=('Segoe UI', 11), bg=btn_gray, fg='white',
+                         activebackground='#7f8c8d', activeforeground='white', relief='flat', padx=10, pady=8,
+                         cursor='hand2', command=self.on_cancel)
+        btn3.pack(side='left', expand=True, fill='x', padx=5)
+        
+        # Center window relative to parent
+        parent.update_idletasks()
+        parent_x = parent.winfo_rootx()
+        parent_y = parent.winfo_rooty()
+        parent_w = parent.winfo_width()
+        parent_h = parent.winfo_height()
+        
+        x = parent_x + (parent_w - 450) // 2
+        y = parent_y + (parent_h - 220) // 2
+        self.geometry(f"450x220+{x}+{y}")
+        
+        self.wait_window()
+
+    def on_current(self):
+        self.result = "current"
+        self.destroy()
+        
+    def on_all(self):
+        self.result = "all"
+        self.destroy()
+        
+    def on_cancel(self):
+        self.result = None
+        self.destroy()
