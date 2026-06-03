@@ -24,16 +24,33 @@ def connected_sheet(sheet_id):
 
     return wsheet
 
-def export_to_csv(company_name, sheet_id):
+def retry_api_call(func, *args, **kwargs):
+    import time
+    max_retries = 5
+    backoff = 2
+    for attempt in range(max_retries):
+        try:
+            return func(*args, **kwargs)
+        except gspread.exceptions.APIError as e:
+            if getattr(e, 'response', None) is not None and e.response.status_code == 429:
+                if attempt == max_retries - 1:
+                    raise e
+                time.sleep(backoff)
+                backoff *= 2
+            else:
+                raise e
+
+def export_to_csv(company_name, sheet_id, month_val):
     import csv
-    sheet = connected_sheet(sheet_id)
-    worksheets = sheet.worksheets()
+    import time
+    sheet = retry_api_call(connected_sheet, sheet_id)
+    worksheets = retry_api_call(sheet.worksheets)
     
     root_dir = get_application_path(__file__)
     export_dir = os.path.join(root_dir, 'src', 'sheet', 'csv_exports')
     os.makedirs(export_dir, exist_ok=True)
     
-    filename = f"{company_name}-API-BASE - Consolidated.csv"
+    filename = f"{month_val}_{company_name}.csv"
     filepath = os.path.join(export_dir, filename)
     
     with open(filepath, 'w', newline='', encoding='utf-8') as f:
@@ -43,11 +60,14 @@ def export_to_csv(company_name, sheet_id):
             writer.writerow([f"--- START OF SHEET: {ws.title} ---"])
             
             # Write sheet rows
-            rows = ws.get_all_values()
+            rows = retry_api_call(ws.get_all_values)
             writer.writerows(rows)
             
             # Write an empty line to match the samples
             writer.writerow([])
+            
+            # Proactive sleep to avoid hitting read limits
+            time.sleep(0.5)
             
     return filepath
 

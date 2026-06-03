@@ -311,6 +311,7 @@ class AutomationApp:
             return
             
         company_val = self.platform_widgets[self.current_platform]['company_var'].get()
+        month_val = self.platform_widgets[self.current_platform]['month_var'].get()
         
         # Open the selection modal dialog
         dialog = ExportOptionDialog(self.root, company_val, self.export_mode)
@@ -337,11 +338,11 @@ class AutomationApp:
         self.progress.pack(side="left", padx=10)
         self.progress.start(10)
         
-        thread = threading.Thread(target=self.export_csv_data, args=(brands, selection == "all"))
+        thread = threading.Thread(target=self.export_csv_data, args=(brands, selection == "all", month_val))
         thread.daemon = True
         thread.start()
 
-    def export_csv_data(self, brands, is_all_mode):
+    def export_csv_data(self, brands, is_all_mode, month_val):
         """Perform the CSV export in the background"""
         try:
             filepaths = []
@@ -349,7 +350,7 @@ class AutomationApp:
             # Export each selected brand
             for brand in brands:
                 sheet_id = [comp.get("id") for comp in profile_specs if comp.get("name") == brand][0]
-                filepath = export_to_csv(brand, sheet_id)
+                filepath = export_to_csv(brand, sheet_id, month_val)
                 filepaths.append(filepath)
             
             if self.export_mode == "email":
