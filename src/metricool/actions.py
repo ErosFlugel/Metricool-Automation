@@ -15,7 +15,6 @@ def generate_details_IG(month, blog_id, worksheets):
 
     # api_data
     combo_details_ig_data = get_detalles_ig(month, blog_id, worksheets)
-
     # Code guard
     if (not combo_details_ig_data.get("success")) and (combo_details_ig_data.get("status") == "empty_metricool"):
 
@@ -34,6 +33,10 @@ def generate_details_IG(month, blog_id, worksheets):
                 }
             }
         ]
+
+        requests += generate_interactions_without_ads(combo_details_ig_data.get("data").get("interactions_without_ads"), month, worksheets)
+        requests += generate_metrics_without_ads(combo_details_ig_data.get("data").get("metrics_without_ads"), month, worksheets)
+
         return requests
 
     if combo_details_ig_data.get("success") == True:
@@ -182,6 +185,9 @@ def generate_followers(month, blog_id, worksheets):
     # Code guard
     if (not followers_data.get("success")) and (followers_data.get("status") == "empty_metricool"):
 
+        current_monthly_position = (current_worksheet.get("tables_data")[0].get("row_starting_position") - 1) + (month.get("number") - 1)
+        starting_column_index = current_worksheet.get("tables_data")[0].get("column_starting_position") - 1
+
         requests = [
             {
                 "updateCells": {
@@ -195,49 +201,63 @@ def generate_followers(month, blog_id, worksheets):
                         "endRowIndex": 1,
                     }
                 }
+            },
+            {
+                "repeatCell": {
+                    "range": {
+                        "sheetId": worksheet_id,
+                        "startRowIndex": current_monthly_position,
+                        "startColumnIndex": starting_column_index + 1,
+                        "endColumnIndex": starting_column_index + 6,
+                        "endRowIndex": current_monthly_position + 1
+                    },
+                    "cell": {
+                        "userEnteredValue": {}
+                    },
+                    "fields": "userEnteredValue"
+                }
             }
         ]
-        return requests
-    
-    if followers_data.get("success") == True:
+        
+    elif followers_data.get("success") == True:
         followers_data = followers_data.get("data")
 
-    # table limits
-    current_monthly_position = (current_worksheet.get("tables_data")[0].get("row_starting_position") - 1) + (month.get("number") - 1)
-    starting_column_index = current_worksheet.get("tables_data")[0].get("column_starting_position") - 1
-    data_column_amount = len(followers_data[0].get("values"))
-    data_row_amount = len(followers_data)
-    
-    # Main Table
-    requests = [
-        # Cleaning status error cell
-        {
-            "updateCells": {
-                "rows": [{"values": [{"userEnteredValue": {"stringValue": ""}}]}],
-                "fields": "userEnteredValue",
-                "range": {
-                    "sheetId": worksheet_id,
-                    "startRowIndex": 0,
-                    "startColumnIndex": 0,
-                    "endColumnIndex": 1,
-                    "endRowIndex": 1,
+        # table limits
+        current_monthly_position = (current_worksheet.get("tables_data")[0].get("row_starting_position") - 1) + (month.get("number") - 1)
+        starting_column_index = current_worksheet.get("tables_data")[0].get("column_starting_position") - 1
+        data_column_amount = len(followers_data[0].get("values"))
+        data_row_amount = len(followers_data)
+        
+        # Main Table
+        requests = [
+            # Cleaning status error cell
+            {
+                "updateCells": {
+                    "rows": [{"values": [{"userEnteredValue": {"stringValue": ""}}]}],
+                    "fields": "userEnteredValue",
+                    "range": {
+                        "sheetId": worksheet_id,
+                        "startRowIndex": 0,
+                        "startColumnIndex": 0,
+                        "endColumnIndex": 1,
+                        "endRowIndex": 1,
+                    }
+                }
+            },
+            {
+                "updateCells": {
+                    "rows": followers_data,
+                    "fields": "userEnteredValue",
+                    "range": {
+                        "sheetId": worksheet_id,
+                        "startRowIndex": current_monthly_position,
+                        "startColumnIndex": starting_column_index,
+                        "endColumnIndex": starting_column_index + data_column_amount,
+                        "endRowIndex": current_monthly_position + 1,
+                    }
                 }
             }
-        },
-        {
-            "updateCells": {
-                "rows": followers_data,
-                "fields": "userEnteredValue",
-                "range": {
-                    "sheetId": worksheet_id,
-                    "startRowIndex": current_monthly_position,
-                    "startColumnIndex": starting_column_index,
-                    "endColumnIndex": starting_column_index + data_column_amount,
-                    "endRowIndex": current_monthly_position + 1,
-                }
-            }
-        }
-    ]
+        ]
 
     # Base data for graphics
     compare_months = [
@@ -410,28 +430,55 @@ def generate_interactions_without_ads(rows_data, month, worksheets):
     if not rows_data:
         return
 
-    # table limits
+    # Error handling
+    is_error = False
+    if len(rows_data) > 0 and isinstance(rows_data[0], dict) and len(rows_data[0].get("values", [])) > 0:
+        val = rows_data[0]["values"][0].get("userEnteredValue", {}).get("stringValue", "")
+        if "Metricool no tiene datos" in val:
+            is_error = True
+
     current_monthly_position = (current_worksheet.get("tables_data")[0].get("row_starting_position") - 1) + (month.get("number") - 1)
     starting_column_index = current_worksheet.get("tables_data")[0].get("column_starting_position") - 1
-    data_column_amount = len(rows_data[0].get("values"))
-    # data_row_amount = len(rows_data)
 
-     # Main Table
-    requests = [
-        {
-            "updateCells": {
-                "rows": rows_data,
-                "fields": "userEnteredValue",
-                "range": {
-                    "sheetId": worksheet_id,
-                    "startRowIndex": current_monthly_position,
-                    "startColumnIndex": starting_column_index,
-                    "endColumnIndex": starting_column_index + data_column_amount,
-                    "endRowIndex": current_monthly_position + 1,
+    if is_error:
+        requests = [
+            {
+                "repeatCell": {
+                    "range": {
+                        "sheetId": worksheet_id,
+                        "startRowIndex": current_monthly_position,
+                        "startColumnIndex": starting_column_index + 1,
+                        "endColumnIndex": starting_column_index + 30,
+                        "endRowIndex": current_monthly_position + 1
+                    },
+                    "cell": {
+                        "userEnteredValue": {}
+                    },
+                    "fields": "userEnteredValue"
                 }
             }
-        }
-    ]
+        ]
+    else:
+        # table limits
+        data_column_amount = len(rows_data[0].get("values"))
+        # data_row_amount = len(rows_data)
+
+         # Main Table
+        requests = [
+            {
+                "updateCells": {
+                    "rows": rows_data,
+                    "fields": "userEnteredValue",
+                    "range": {
+                        "sheetId": worksheet_id,
+                        "startRowIndex": current_monthly_position,
+                        "startColumnIndex": starting_column_index,
+                        "endColumnIndex": starting_column_index + data_column_amount,
+                        "endRowIndex": current_monthly_position + 1,
+                    }
+                }
+            }
+        ]
 
     # Base data for graphics
     compare_months = [
@@ -482,23 +529,48 @@ def generate_metrics_without_ads(rows_data, month, worksheets):
     worksheet_id = current_worksheet.get("id")
 
     # Code guard
-    if not (rows_data[0] and rows_data[1]):
-        return
+    is_error = False
+    if rows_data and len(rows_data) > 0 and isinstance(rows_data[0], dict) and len(rows_data[0].get("values", [])) > 0:
+        val = rows_data[0]["values"][0].get("userEnteredValue", {}).get("stringValue", "")
+        if "Metricool no tiene datos" in val:
+            is_error = True
+
+    if not is_error:
+        if not rows_data or not (len(rows_data) == 2 and rows_data[0] and rows_data[1]):
+            return
     
     requests = []
     # print(json.dumps(rows_data, indent=4))
     
-    for i, table_rows_data in enumerate(rows_data):
+    for i in range(2):
         
         # table limits
         current_monthly_position = (current_worksheet.get("tables_data")[i].get("row_starting_position") - 1) + (month.get("number") - 1)
         starting_column_index = current_worksheet.get("tables_data")[i].get("column_starting_position") - 1
-        data_column_amount = len(table_rows_data[0].get("values"))
-        # data_row_amount = len(table_rows_data)
+        
+        if is_error:
+            requests.append({
+                "repeatCell": {
+                    "range": {
+                        "sheetId": worksheet_id,
+                        "startRowIndex": current_monthly_position,
+                        "startColumnIndex": starting_column_index + 1,
+                        "endColumnIndex": starting_column_index + 35,
+                        "endRowIndex": current_monthly_position + 1
+                    },
+                    "cell": {
+                        "userEnteredValue": {}
+                    },
+                    "fields": "userEnteredValue"
+                }
+            })
+        else:
+            table_rows_data = rows_data[i]
+            data_column_amount = len(table_rows_data[0].get("values"))
+            # data_row_amount = len(table_rows_data)
 
-        # Main Table
-        requests.append([
-            {
+            # Main Table
+            requests.append({
                 "updateCells": {
                     "rows": table_rows_data,
                     "fields": "userEnteredValue",
@@ -510,8 +582,7 @@ def generate_metrics_without_ads(rows_data, month, worksheets):
                         "endRowIndex": current_monthly_position + 1,
                     }
                 }
-            }
-        ])
+            })
 
         # Base data for graphics
         compare_months = [
@@ -582,6 +653,8 @@ def generate_details_st(month, blog_id, worksheets):
                 }
             }
         ]
+        
+        requests += generate_metrics_st(month, worksheets)
         return requests
     
     if stories_details_data.get("success") == True:
@@ -678,34 +751,50 @@ def generate_metrics_st(month, worksheets):
     # api_data
     metrics_data = get_metrics_st(month, current_worksheet)
 
-    # Code Guard
-    if not metrics_data:
-        return 
-    
-    # table limits
+    # table limits (always needed for graphics)
     row_starting_position = current_worksheet.get("tables_data")[0].get("row_starting_position")
     current_monthly_position = (row_starting_position - 1) + (month.get("number") - 1)
     starting_column_index = current_worksheet.get("tables_data")[0].get("column_starting_position") - 1
-    data_column_amount = len(metrics_data[0].get("values"))
-    data_row_amount = len(metrics_data)
 
-    requests = [
-        {
-            "updateCells": {
-                "rows": metrics_data,
-                "fields": "userEnteredValue",
-                "range": {
-                    "sheetId": worksheet_id,
-                    "startRowIndex": current_monthly_position,
-                    "startColumnIndex": starting_column_index,
-                    "endColumnIndex": starting_column_index + data_column_amount,
-                    "endRowIndex": current_monthly_position + 1,
+    # Code Guard
+    if not metrics_data:
+        requests = [
+            {
+                "repeatCell": {
+                    "range": {
+                        "sheetId": worksheet_id,
+                        "startRowIndex": current_monthly_position,
+                        "startColumnIndex": starting_column_index + 1,
+                        "endColumnIndex": starting_column_index + 10,
+                        "endRowIndex": current_monthly_position + 1
+                    },
+                    "cell": {
+                        "userEnteredValue": {}
+                    },
+                    "fields": "userEnteredValue"
                 }
             }
-        }
-    ]
+        ]
+    else:
+        data_column_amount = len(metrics_data[0].get("values"))
 
-    # Base data for graphics
+        requests = [
+            {
+                "updateCells": {
+                    "rows": metrics_data,
+                    "fields": "userEnteredValue",
+                    "range": {
+                        "sheetId": worksheet_id,
+                        "startRowIndex": current_monthly_position,
+                        "startColumnIndex": starting_column_index,
+                        "endColumnIndex": starting_column_index + data_column_amount,
+                        "endRowIndex": current_monthly_position + 1,
+                    }
+                }
+            }
+        ]
+
+    # Base data for graphics (always run)
     compare_months = [
         {
             "name": spanish_months[month.get("number") - 3],
@@ -717,7 +806,7 @@ def generate_metrics_st(month, worksheets):
         },
         {
             "name": month.get("name"),
-            "row_number": current_monthly_position + 2
+            "row_number": current_monthly_position + 1
         },
     ]
 
@@ -726,8 +815,8 @@ def generate_metrics_st(month, worksheets):
     table_source = charts_data[0].get("table_source")
     chart_rows_data = get_base_graphic_compare_table(compare_months, table_source.get("formula_letter_index"))
 
-    starting_column_index = table_source.get("column_starting_position") - 1
-    starting_row_index = table_source.get("row_starting_position") - 1
+    chart_starting_column_index = table_source.get("column_starting_position") - 1
+    chart_starting_row_index = table_source.get("row_starting_position") - 1
     chart_data_column_amount = len(chart_rows_data[0].get("values"))
     chart_data_row_amount = len(chart_rows_data)
 
@@ -738,10 +827,10 @@ def generate_metrics_st(month, worksheets):
             "fields": "userEnteredValue",
             "range": {
                 "sheetId": worksheet_id,
-                "startRowIndex": starting_row_index,
-                "startColumnIndex": starting_column_index,
-                "endColumnIndex": starting_column_index + chart_data_column_amount,
-                "endRowIndex": starting_row_index + chart_data_row_amount,
+                "startRowIndex": chart_starting_row_index,
+                "startColumnIndex": chart_starting_column_index,
+                "endColumnIndex": chart_starting_column_index + chart_data_column_amount,
+                "endRowIndex": chart_starting_row_index + chart_data_row_amount,
             }
         }
     })
@@ -774,6 +863,27 @@ def generate_competitors(month, blog_id, worksheets):
                 }
             }
         ]
+        
+        for table in current_worksheet.get("tables_data"):
+            current_monthly_position = (table.get("row_starting_position") - 1) + (month.get("number") - 1)
+            starting_column_index = table.get("column_starting_position") - 1
+            
+            requests.append({
+                "repeatCell": {
+                    "range": {
+                        "sheetId": worksheet_id,
+                        "startRowIndex": current_monthly_position,
+                        "startColumnIndex": starting_column_index + 1,
+                        "endColumnIndex": starting_column_index + 20,
+                        "endRowIndex": current_monthly_position + 1
+                    },
+                    "cell": {
+                        "userEnteredValue": {}
+                    },
+                    "fields": "userEnteredValue"
+                }
+            })
+            
         return requests
     
     

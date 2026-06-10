@@ -224,14 +224,14 @@ def get_detalles_ig(month, blog_id, worksheets):
 
             })
             
-            # Code Guard: If there are no posts or reels, we return a response with an specific status to handle it in the UI and avoid errors with empty data
-            if len(detalles_ig_data) == 0:
-                response = [{"values": [{"userEnteredValue": {"stringValue": f"Metricool no tiene datos para el mes de {month.get('name')}"}}]}]
-                return {"success": False, "status": "empty_metricool", "data": {
-                "details_ig": response,
-                "interactions_without_ads": response,
-                "metrics_without_ads": response
-            }}
+        # Code Guard: If there are no posts or reels, we return a response with an specific status to handle it in the UI and avoid errors with empty data
+        if len(detalles_ig_data) == 0:
+            response = [{"values": [{"userEnteredValue": {"stringValue": f"Metricool no tiene datos para el mes de {month.get('name')}"}}]}]
+            return {"success": False, "status": "empty_metricool", "data": {
+            "details_ig": response,
+            "interactions_without_ads": response,
+            "metrics_without_ads": response
+        }}
 
         # Ordering the publications by published date (newest to oldest)
         detalles_ig_data.sort(key=lambda pub: pub.get("meta").get("publishedAt"), reverse=False) #Reverse for the order
@@ -438,7 +438,7 @@ def get_followers(month, blog_id, worksheet):
         
         total_followers = get_instagram(url, headers, params, "metric")
 
-        if len(total_followers.get("data")[0].get("values")) == 0:
+        if not total_followers.get("data") or len(total_followers.get("data")) == 0 or not total_followers.get("data")[0].get("values") or len(total_followers.get("data")[0].get("values")) == 0:
             response = [{"values": [{"userEnteredValue": {"stringValue": f"Metricool no tiene datos para el mes de {month.get('name')}"}}]}]
             return {"success": False, "status": "empty_metricool", "data": response}
         
@@ -489,6 +489,7 @@ def get_detalles_st(month, blog_id):
 
         # Code Guard: If there is no data for the requested month, we return a response with an specific status to handle it in the UI and avoid errors with empty data
         if len(instagram_stories.get("data")) == 0:
+            stored_data["stories"] = None  # Reset so get_metrics_st knows there are no stories
             response = [{"values": [{"userEnteredValue": {"stringValue": f"Metricool no tiene datos para el mes de {month.get('name')}"}}]}]
             return {"success": False, "status": "empty_metricool", "data": response}
 
@@ -518,6 +519,7 @@ def get_detalles_st(month, blog_id):
         print("===============================")
         print("Something bad happend getting stories details data:")
         print(error)
+        stored_data["stories"] = None  # Reset so get_metrics_st doesn't use stale data
 
 # -----------------------------------------------------
 # 
@@ -526,6 +528,10 @@ def get_metrics_st(month, worksheet):
     try: 
 
         stories_data = stored_data.get("stories")
+
+        # Code Guard: If stories data was not populated (API failed), return None so generate_metrics_st clears the row
+        if not stories_data:
+            return None
 
         all_impressions = stories_data.get("impressions")
         all_reach = stories_data.get("reach")

@@ -61,7 +61,9 @@ def get_instagram(url, headers, params, query=None):
         print(f"An error occurred during the request: {e}")
         print("---------------------------------------------\n")
         
-    return 
+        return { "data": []}
+        
+    return { "data": []}
 
 def get_charts_metadata(sheet_id):
     sh = connected_sheet(sheet_id)
