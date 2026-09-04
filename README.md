@@ -12,10 +12,15 @@ Set Up requirements.txt -> `pip freeze > requirements.txt`
 create the .exe file after some changes
 
 1. uninstall the actual program from program C:\Program Files\Metri-Automation
-2. Delete the installer folder in the git project
-3. on the active virtual environment and in the root folder of the project run in the terminal: `pyinstaller MetricoolAutomation.spec`
-4. open the Inno_setup_MetriAutomation.iss, Save, Build -> Compile (Ctrl + F9)
-5. In the Installer folder: run the MetriAutomation_WINDOWS_setup.exe file (you can share this one with others)
+2. On cmd, run: `make update`
+
+Or (manually):
+
+3. uninstall the actual program from program C:\Program Files\Metri-Automation
+4. Delete the installer folder in the git project
+5. on the active virtual environment and in the root folder of the project run in the terminal: `pyinstaller MetricoolAutomation.spec`
+6. open the Inno_setup_MetriAutomation.iss, Save, Build -> Compile (Ctrl + F9)
+7. In the Installer folder: run the MetriAutomation_WINDOWS_setup.exe file (you can share this one with others)
 
 ## Guía de Instalación para "Metricool Automation"
 
